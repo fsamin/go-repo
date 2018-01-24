@@ -136,8 +136,6 @@ func (r Repo) LatestCommit() (Commit, error) {
 		return c, err
 	}
 
-	fmt.Println(details)
-
 	c.LongHash = hash[:len(hash)-1]
 	c.Hash = hash[:7]
 
