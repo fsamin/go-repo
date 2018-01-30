@@ -2,37 +2,39 @@ package repo
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
-	"os/exec"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 )
 
+func Clone(path, url string) (Repo, error) {
+	r := Repo{path}
+	_, err := r.runCmd("git", "clone", url, ".")
+	if err != nil {
+		return r, err
+	}
+	return r, nil
+}
+
 func New(path string) (Repo, error) {
+	dotGit := filepath.Join(path, ".git")
+	if _, err := os.Stat(dotGit); err != nil || os.IsNotExist(err) {
+		return Repo{}, err
+	}
 	return Repo{path}, nil
 }
 
 func (r Repo) FetchURL() (string, error) {
-	cmd := exec.Command("git", "remote", "show", "origin", "-n")
-	stdOut := new(bytes.Buffer)
-	stdErr := new(bytes.Buffer)
-	cmd.Dir = r.path
-	cmd.Stderr = stdErr
-	cmd.Stdout = stdOut
-	err := cmd.Run()
+	stdOut, err := r.runCmd("git", "remote", "show", "origin", "-n")
 	if err != nil {
 		return "", err
 	}
 
-	errOut := stdErr.Bytes()
-	if len(errOut) > 0 {
-		return "", fmt.Errorf(string(errOut))
-	}
-
-	reader := bufio.NewReader(stdOut)
+	reader := bufio.NewReader(strings.NewReader(stdOut))
 	var fetchURL string
 	for {
 		b, _, err := reader.ReadLine()

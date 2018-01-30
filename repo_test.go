@@ -1,10 +1,25 @@
 package repo
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestClone(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	_, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+}
+
+func TestNewWithError(t *testing.T) {
+	_, err := New(os.TempDir())
+	assert.NotNil(t, err)
+}
 
 func TestFetchURL(t *testing.T) {
 	r, err := New(".")
@@ -19,7 +34,6 @@ func TestFetchURL(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Logf("name: %v", n)
-
 }
 
 func Test_trimURL(t *testing.T) {
