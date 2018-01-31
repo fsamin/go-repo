@@ -175,3 +175,8 @@ func (r Repo) Pull(remote, branch string) error {
 	_, err := r.runCmd("git", "pull", remote, branch)
 	return err
 }
+
+func (r Repo) ResetHard(hash string) error {
+	_, err := r.runCmd("git", "reset", "--hard", hash)
+	return err
+}

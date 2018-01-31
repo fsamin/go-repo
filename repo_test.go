@@ -52,6 +52,18 @@ func TestPull(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestResetHard(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+	err = r.FetchRemoteBranch("origin", "tests")
+	assert.NoError(t, err)
+	err = r.ResetHard("7fc6e6ff62133460b7f288043db6e47edf5dd6aa")
+	assert.NoError(t, err)
+}
+
 func TestNewWithError(t *testing.T) {
 	_, err := New(os.TempDir())
 	assert.NotNil(t, err)
