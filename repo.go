@@ -154,3 +154,7 @@ func (r Repo) LatestCommit() (Commit, error) {
 
 	return c, nil
 }
+
+func (r Repo) CurrentBranch() (string, error) {
+	return r.runCmd("git", "rev-parse", "--abbrev-ref", "HEAD")
+}
