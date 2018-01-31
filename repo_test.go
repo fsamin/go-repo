@@ -152,3 +152,15 @@ func TestLatestCommit(t *testing.T) {
 	t.Logf("%+v", c)
 	assert.NoError(t, err)
 }
+
+func TestDefaultBranch(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+
+	s, err := r.DefaultBranch()
+	assert.NoError(t, err)
+	assert.Equal(t, "master", s)
+}
