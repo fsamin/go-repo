@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	zglob "github.com/mattn/go-zglob"
 )
 
 func Clone(path, url string) (Repo, error) {
@@ -189,4 +191,24 @@ func (r Repo) DefaultBranch() (string, error) {
 	s = strings.Replace(s, "\n", "", 1)
 	s = strings.Replace(s, "refs/remotes/origin/", "", 1)
 	return s, nil
+}
+
+func (r Repo) Glob(s string) ([]string, error) {
+	p := filepath.Join(r.path, s)
+	files, err := zglob.Glob(p)
+	if err != nil {
+		return nil, err
+	}
+	for i, f := range files {
+		files[i], err = filepath.Rel(r.path, f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return files, nil
+}
+
+func (r Repo) Open(s string) (*os.File, error) {
+	p := filepath.Join(r.path, s)
+	return os.Open(p)
 }

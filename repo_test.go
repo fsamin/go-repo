@@ -164,3 +164,32 @@ func TestDefaultBranch(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "master", s)
 }
+
+func TestGlob(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+
+	files, err := r.Glob("**/*.md")
+	assert.NoError(t, err)
+	assert.EqualValues(t, []string{"README.md"}, files)
+}
+
+func TestOpen(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+
+	files, err := r.Glob("**/*.md")
+	assert.NoError(t, err)
+	f, err := r.Open(files[0])
+	assert.NoError(t, err)
+	assert.NotNil(t, f)
+	if err != nil {
+		f.Close()
+	}
+}
