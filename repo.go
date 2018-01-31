@@ -170,3 +170,8 @@ func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	_, err := r.runCmd("git", "checkout", "-b", branch, "--track", remote+"/"+branch)
 	return err
 }
+
+func (r Repo) Pull(remote, branch string) error {
+	_, err := r.runCmd("git", "pull", remote, branch)
+	return err
+}
