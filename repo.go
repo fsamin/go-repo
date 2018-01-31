@@ -156,5 +156,17 @@ func (r Repo) LatestCommit() (Commit, error) {
 }
 
 func (r Repo) CurrentBranch() (string, error) {
-	return r.runCmd("git", "rev-parse", "--abbrev-ref", "HEAD")
+	b, err := r.runCmd("git", "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return b[:len(b)-1], nil
+}
+
+func (r Repo) FetchRemoteBranch(remote, branch string) error {
+	if _, err := r.runCmd("git", "fetch"); err != nil {
+		return err
+	}
+	_, err := r.runCmd("git", "checkout", "-b", branch, "--track", remote+"/"+branch)
+	return err
 }

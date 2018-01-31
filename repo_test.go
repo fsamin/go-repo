@@ -16,6 +16,27 @@ func TestClone(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestCurrentBranch(t *testing.T) {
+	r, err := New(".")
+	assert.NoError(t, err)
+	b, err := r.CurrentBranch()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, b)
+}
+
+func TestFetchRemoteBranch(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+	err = r.FetchRemoteBranch("origin", "tests")
+	assert.NoError(t, err)
+	b, err := r.CurrentBranch()
+	assert.NoError(t, err)
+	assert.Equal(t, "tests", b)
+}
+
 func TestNewWithError(t *testing.T) {
 	_, err := New(os.TempDir())
 	assert.NotNil(t, err)
