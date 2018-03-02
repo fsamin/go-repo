@@ -25,7 +25,7 @@ func Clone(path, url string) (Repo, error) {
 func New(path string) (Repo, error) {
 	dotGit := filepath.Join(path, ".git")
 	if _, err := os.Stat(dotGit); err != nil || os.IsNotExist(err) {
-		return Repo{}, err
+		return Repo{ path}, err
 	}
 	return Repo{path}, nil
 }
@@ -167,10 +167,13 @@ func (r Repo) CurrentBranch() (string, error) {
 
 func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	if _, err := r.runCmd("git", "fetch"); err != nil {
-		return err
+		return fmt.Errorf("unable to git fetch: %s", err)
 	}
 	_, err := r.runCmd("git", "checkout", "-b", branch, "--track", remote+"/"+branch)
-	return err
+	if err != nil {
+		return fmt.Errorf("unable to git checkout: %s", err)
+	}
+	return nil
 }
 
 func (r Repo) Pull(remote, branch string) error {
