@@ -34,8 +34,7 @@ Go-Repo is just wrapper arround git commands.
 ````golang 
     r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
     ...
-	r.LocalConfigSet("foo", "bar", "value"))
-
+    r.LocalConfigSet("foo", "bar", "value"))
     val, err := r.LocalConfigGet("foo", "bar")
     ...
 ````
@@ -44,8 +43,8 @@ Go-Repo is just wrapper arround git commands.
 ````golang 
     r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
     ...
-	files, err := r.Glob("**/*.md")
-	...
+    files, err := r.Glob("**/*.md")
+    ...
     f, err := r.Open(files[0])
     ...
 ````

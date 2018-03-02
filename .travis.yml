@@ -5,7 +5,9 @@ go:
   - tip
   - master
 
+before_instal:
+  - apt-get install --only-upgrade -y git
+
 script:
   - go test ./...
   - go build
-  
