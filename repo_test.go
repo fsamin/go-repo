@@ -174,7 +174,7 @@ func TestGlob(t *testing.T) {
 
 	files, err := r.Glob("**/*.md")
 	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"README.md"}, files)
+	assert.EqualValues(t, []string{"LICENSE.md", "README.md"}, files)
 }
 
 func TestOpen(t *testing.T) {
