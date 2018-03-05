@@ -47,7 +47,7 @@ tUQx5iDRVkQ61qdoFdD7MR7oQlRkrGRrH1nHDs2dXlpPQ14lGowkGg==
 -----END RSA PRIVATE KEY-----`)
 
 func TestCloneFromSSHShouldFailed(t *testing.T) {
-	path := filepath.Join("testdata", "TestCloneFromSSH")
+	path := filepath.Join("testdata", "TestCloneFromSSHShouldFailed")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
 	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(testRSAKey), WithVerbose())
@@ -55,11 +55,27 @@ func TestCloneFromSSHShouldFailed(t *testing.T) {
 }
 
 func TestCloneFromSSHShouldSuccess(t *testing.T) {
-	path := filepath.Join("testdata", "TestCloneFromSSH")
+	path := filepath.Join("testdata", "TestCloneFromSSHShouldSuccess")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
 	pkey, _ := ioutil.ReadFile("id_rsa_test")
 	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
+	assert.NoError(t, err)
+}
+
+func TestCloneFromHTTPShouldFailed(t *testing.T) {
+	path := filepath.Join("testdata", "TestCloneFromHTTPShouldFailed")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("myuser", "mypassword"), WithVerbose())
+	assert.Error(t, err)
+}
+
+func TestCloneFromHTTPShouldSuccess(t *testing.T) {
+	path := filepath.Join("testdata", "TestCloneFromHTTPShouldSuccess")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")), WithVerbose())
 	assert.NoError(t, err)
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -18,13 +19,16 @@ import (
 
 // Clone a git repository from the specified url to the destination path. Use Options to force the use of SSH Key and or PGP Key on this repo
 func Clone(path, url string, opts ...Option) (Repo, error) {
-	r := Repo{path: path}
+	r := Repo{path: path, url: url}
 	for _, f := range opts {
 		if err := f(&r); err != nil {
 			return r, err
 		}
 	}
-	_, err := r.runCmd("git", "clone", url, ".")
+	if r.verbose {
+		r.log("Cloning %s\n", r.url)
+	}
+	_, err := r.runCmd("git", "clone", r.url, ".")
 	if err != nil {
 		return r, err
 	}
@@ -277,8 +281,12 @@ func WithSSHAuth(privateKey []byte) Option {
 // WithHTTPAuth override the repo configuration to use http auth
 func WithHTTPAuth(username string, password string) Option {
 	return func(r *Repo) error {
-		r.httpUsername = username
-		r.httpPassword = password
+		u, err := url.Parse(r.url)
+		if err != nil {
+			return err
+		}
+		u.User = url.UserPassword(username, password)
+		r.url = u.String()
 		return nil
 	}
 }
@@ -295,5 +303,11 @@ func WithVerbose() Option {
 	return func(r *Repo) error {
 		r.verbose = true
 		return nil
+	}
+}
+
+func (r Repo) log(format string, i ...interface{}) {
+	if r.logger != nil {
+		r.logger(format, i...)
 	}
 }

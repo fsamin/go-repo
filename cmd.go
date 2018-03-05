@@ -21,12 +21,12 @@ func (r Repo) runCmd(name string, args ...string) (stdOut string, err error) {
 		}
 		cmd.Env = append(cmd.Env, envs...)
 		if r.verbose {
-			fmt.Println(envs)
+			r.log("Using %v\n", envs)
 		}
 	}
 
 	if r.verbose {
-		fmt.Printf("%+v\n", cmd)
+		r.log("Running command %+v\n", cmd)
 	}
 
 	if err := cmd.Run(); err != nil {
