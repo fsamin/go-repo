@@ -60,7 +60,7 @@ func TestCloneFromSSHShouldSuccess(t *testing.T) {
 	defer os.RemoveAll("testdata")
 	pkey, _ := ioutil.ReadFile("id_rsa_test")
 	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestCurrentBranch(t *testing.T) {
