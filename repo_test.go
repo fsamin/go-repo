@@ -221,7 +221,17 @@ func TestGlob(t *testing.T) {
 
 	files, err := r.Glob("**/*.md")
 	assert.NoError(t, err)
-	assert.EqualValues(t, []string{"LICENSE.md", "README.md"}, files)
+	var readmeFound, licenceFound bool
+	for _, f := range files {
+		switch f {
+		case "LICENSE.md":
+			licenceFound = true
+		case "README.md":
+			readmeFound = true
+		}
+	}
+	assert.True(t, readmeFound, "README.md not found")
+	assert.True(t, licenceFound, "LICENSE.md not found")
 }
 
 func TestOpen(t *testing.T) {
