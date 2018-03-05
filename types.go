@@ -3,7 +3,13 @@ package repo
 import "time"
 
 type Repo struct {
-	path string
+	path         string
+	url          string
+	httpUsername string
+	httpPassword string
+	sshKey       *sshKey
+	pgpKey       *pgpKey
+	verbose      bool
 }
 
 type Commit struct {

@@ -2,9 +2,12 @@ package repo
 
 import (
 	"bufio"
+	"crypto/md5"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,8 +16,13 @@ import (
 	zglob "github.com/mattn/go-zglob"
 )
 
-func Clone(path, url string) (Repo, error) {
-	r := Repo{path}
+func Clone(path, url string, opts ...RepoOption) (Repo, error) {
+	r := Repo{path: path}
+	for _, f := range opts {
+		if err := f(&r); err != nil {
+			return r, err
+		}
+	}
 	_, err := r.runCmd("git", "clone", url, ".")
 	if err != nil {
 		return r, err
@@ -22,12 +30,18 @@ func Clone(path, url string) (Repo, error) {
 	return r, nil
 }
 
-func New(path string) (Repo, error) {
+func New(path string, opts ...RepoOption) (Repo, error) {
+	r := Repo{path: path}
+	for _, f := range opts {
+		if err := f(&r); err != nil {
+			return r, err
+		}
+	}
 	dotGit := filepath.Join(path, ".git")
 	if _, err := os.Stat(dotGit); err != nil || os.IsNotExist(err) {
-		return Repo{ path}, err
+		return r, err
 	}
-	return Repo{path}, nil
+	return r, nil
 }
 
 func (r Repo) FetchURL() (string, error) {
@@ -214,4 +228,53 @@ func (r Repo) Glob(s string) ([]string, error) {
 func (r Repo) Open(s string) (*os.File, error) {
 	p := filepath.Join(r.path, s)
 	return os.Open(p)
+}
+
+type RepoOption func(r *Repo) error
+
+func WithSSHAuth(privateKey []byte) RepoOption {
+	return func(r *Repo) error {
+		r.sshKey = &sshKey{
+			content: privateKey,
+		}
+
+		h := md5.New()
+		if _, err := io.WriteString(h, string(privateKey)); err != nil {
+			return err
+		}
+
+		u, err := user.Current()
+		if err != nil {
+			return err
+		}
+
+		md5sum := fmt.Sprintf("%x", h.Sum(nil))
+		dir := filepath.Join(u.HomeDir, ".lib-git-repo", md5sum)
+		if err := os.MkdirAll(dir, os.FileMode(0700)); err != nil {
+			return err
+		}
+		r.sshKey.filename = filepath.Join(dir, "id_rsa")
+		return ioutil.WriteFile(r.sshKey.filename, r.sshKey.content, os.FileMode(0600))
+	}
+}
+
+func WithHTTPAuth(username string, password string) RepoOption {
+	return func(r *Repo) error {
+		r.httpUsername = username
+		r.httpPassword = password
+		return nil
+	}
+}
+
+func InstallPGPKey(privateKey []byte) RepoOption {
+	return func(r *Repo) error {
+		return nil
+	}
+}
+
+func WithVerbose() RepoOption {
+	return func(r *Repo) error {
+		r.verbose = true
+		return nil
+	}
 }
