@@ -63,14 +63,6 @@ func TestCloneFromSSHShouldSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCloneFromHTTPShouldFailed(t *testing.T) {
-	path := filepath.Join("testdata", "TestCloneFromHTTPShouldFailed")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
-	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("myuser", "mypassword"), WithVerbose())
-	assert.Error(t, err)
-}
-
 func TestCloneFromHTTPShouldSuccess(t *testing.T) {
 	path := filepath.Join("testdata", "TestCloneFromHTTPShouldSuccess")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
