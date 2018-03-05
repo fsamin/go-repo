@@ -6,7 +6,7 @@ go:
 - tip
 - master
 before_install:
-- apt-get install --only-upgrade -y git
+- sudo apt-get install --only-upgrade -y git
 - openssl aes-256-cbc -K $encrypted_3973f9013d3c_key -iv $encrypted_3973f9013d3c_iv -in id_rsa_test.enc -out id_rsa_test -d
 script:
 - go get
