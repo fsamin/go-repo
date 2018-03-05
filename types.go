@@ -2,6 +2,7 @@ package repo
 
 import "time"
 
+// Repo is the main type of this lib
 type Repo struct {
 	path         string
 	url          string
@@ -12,6 +13,7 @@ type Repo struct {
 	verbose      bool
 }
 
+// Commit represent a git commit
 type Commit struct {
 	LongHash string
 	Hash     string

@@ -16,7 +16,8 @@ import (
 	zglob "github.com/mattn/go-zglob"
 )
 
-func Clone(path, url string, opts ...RepoOption) (Repo, error) {
+// Clone a git repository from the specified url to the destination path. Use Options to force the use of SSH Key and or PGP Key on this repo
+func Clone(path, url string, opts ...Option) (Repo, error) {
 	r := Repo{path: path}
 	for _, f := range opts {
 		if err := f(&r); err != nil {
@@ -30,7 +31,8 @@ func Clone(path, url string, opts ...RepoOption) (Repo, error) {
 	return r, nil
 }
 
-func New(path string, opts ...RepoOption) (Repo, error) {
+// New instanciance a repo instance from the path assuming the repo has already been cloned in.
+func New(path string, opts ...Option) (Repo, error) {
 	r := Repo{path: path}
 	for _, f := range opts {
 		if err := f(&r); err != nil {
@@ -44,6 +46,7 @@ func New(path string, opts ...RepoOption) (Repo, error) {
 	return r, nil
 }
 
+// FetchURL returns the git URL the the remote origin
 func (r Repo) FetchURL() (string, error) {
 	stdOut, err := r.runCmd("git", "remote", "show", "origin", "-n")
 	if err != nil {
@@ -70,6 +73,7 @@ func (r Repo) FetchURL() (string, error) {
 	return fetchURL, nil
 }
 
+// Name returns the name of the repo, deduced from the remote origin URL
 func (r Repo) Name() (string, error) {
 	fetchURL, err := r.FetchURL()
 	if err != nil {
@@ -79,6 +83,7 @@ func (r Repo) Name() (string, error) {
 	return trimURL(fetchURL)
 }
 
+// LocalConfigGet returns data from the local git config
 func (r Repo) LocalConfigGet(section, key string) (string, error) {
 	s, err := r.runCmd("git", "config", "--local", "--get", fmt.Sprintf("%s.%s", section, key))
 	if err != nil {
@@ -87,6 +92,7 @@ func (r Repo) LocalConfigGet(section, key string) (string, error) {
 	return s[:len(s)-1], nil
 }
 
+// LocalConfigSet set data in the local git config
 func (r Repo) LocalConfigSet(section, key, value string) error {
 	conf, _ := r.LocalConfigGet(section, key)
 	s := fmt.Sprintf("%s.%s", section, key)
@@ -142,6 +148,7 @@ func trimURL(fetchURL string) (string, error) {
 	return repoName, nil
 }
 
+// LatestCommit returns the latest commit of the current branch
 func (r Repo) LatestCommit() (Commit, error) {
 	c := Commit{}
 	hash, err := r.runCmd("git", "rev-parse", "HEAD")
@@ -171,6 +178,7 @@ func (r Repo) LatestCommit() (Commit, error) {
 	return c, nil
 }
 
+// CurrentBranch returns the current branch
 func (r Repo) CurrentBranch() (string, error) {
 	b, err := r.runCmd("git", "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
@@ -179,6 +187,7 @@ func (r Repo) CurrentBranch() (string, error) {
 	return b[:len(b)-1], nil
 }
 
+// FetchRemoteBranch runs a git fetch then checkout the remote branch
 func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	if _, err := r.runCmd("git", "fetch"); err != nil {
 		return fmt.Errorf("unable to git fetch: %s", err)
@@ -190,16 +199,19 @@ func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	return nil
 }
 
+// Pull pulls a branch from a remote
 func (r Repo) Pull(remote, branch string) error {
 	_, err := r.runCmd("git", "pull", remote, branch)
 	return err
 }
 
+// ResetHard hard resets a ref
 func (r Repo) ResetHard(hash string) error {
 	_, err := r.runCmd("git", "reset", "--hard", hash)
 	return err
 }
 
+// DefaultBranch returns the default branch of the remote origin
 func (r Repo) DefaultBranch() (string, error) {
 	s, err := r.runCmd("git", "symbolic-ref", "refs/remotes/origin/HEAD")
 	if err != nil {
@@ -210,6 +222,7 @@ func (r Repo) DefaultBranch() (string, error) {
 	return s, nil
 }
 
+// Glob returns the matching files in the repo
 func (r Repo) Glob(s string) ([]string, error) {
 	p := filepath.Join(r.path, s)
 	files, err := zglob.Glob(p)
@@ -225,14 +238,17 @@ func (r Repo) Glob(s string) ([]string, error) {
 	return files, nil
 }
 
+// Open opens a file form the repo
 func (r Repo) Open(s string) (*os.File, error) {
 	p := filepath.Join(r.path, s)
 	return os.Open(p)
 }
 
-type RepoOption func(r *Repo) error
+// Option is a function option
+type Option func(r *Repo) error
 
-func WithSSHAuth(privateKey []byte) RepoOption {
+// WithSSHAuth configure the git command to use a specific private key
+func WithSSHAuth(privateKey []byte) Option {
 	return func(r *Repo) error {
 		r.sshKey = &sshKey{
 			content: privateKey,
@@ -258,7 +274,8 @@ func WithSSHAuth(privateKey []byte) RepoOption {
 	}
 }
 
-func WithHTTPAuth(username string, password string) RepoOption {
+// WithHTTPAuth override the repo configuration to use http auth
+func WithHTTPAuth(username string, password string) Option {
 	return func(r *Repo) error {
 		r.httpUsername = username
 		r.httpPassword = password
@@ -266,13 +283,15 @@ func WithHTTPAuth(username string, password string) RepoOption {
 	}
 }
 
-func InstallPGPKey(privateKey []byte) RepoOption {
+// InstallPGPKey install a pgp key in the repo configuration
+func InstallPGPKey(privateKey []byte) Option {
 	return func(r *Repo) error {
 		return nil
 	}
 }
 
-func WithVerbose() RepoOption {
+// WithVerbose add some logs
+func WithVerbose() Option {
 	return func(r *Repo) error {
 		r.verbose = true
 		return nil

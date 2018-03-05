@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -50,6 +51,15 @@ func TestCloneFromSSHShouldFailed(t *testing.T) {
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
 	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(testRSAKey), WithVerbose())
+	assert.Error(t, err)
+}
+
+func TestCloneFromSSHShouldSuccess(t *testing.T) {
+	path := filepath.Join("testdata", "TestCloneFromSSH")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	pkey, _ := ioutil.ReadFile("id_rsa_test")
+	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
 	assert.Error(t, err)
 }
 
