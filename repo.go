@@ -101,7 +101,7 @@ func (r Repo) LocalConfigSet(section, key, value string) error {
 	conf, _ := r.LocalConfigGet(section, key)
 	s := fmt.Sprintf("%s.%s", section, key)
 	if conf != "" {
-		if _, err := r.runCmd("git", "config", "--local", "--unset", s); err != nil {
+		if _, err := r.runCmd("git", "config", "--local", "--unset-all", s); err != nil {
 			return err
 		}
 	}
