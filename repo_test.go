@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -257,4 +258,30 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		f.Close()
 	}
+}
+
+func TestCheckoutNewBranch_Checkout_DeleteBranch(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+
+	assert.NoError(t, r.CheckoutNewBranch("newBranch"))
+	assert.NoError(t, r.Checkout("master"))
+	assert.NoError(t, r.DeleteBranch("newBranch"))
+}
+
+func TestPush(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+
+	assert.NoError(t, r.CheckoutNewBranch("TestBranch"))
+	assert.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	assert.NoError(t, r.Add("README.md"))
+	assert.NoError(t, r.Commit("This is a test"))
+	assert.NoError(t, r.Push("origin", "TestBranch"))
 }

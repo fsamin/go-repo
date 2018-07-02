@@ -203,6 +203,33 @@ func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	return nil
 }
 
+// Checkout checkouts a branch on the local repository
+func (r Repo) Checkout(branch string) error {
+	_, err := r.runCmd("git", "checkout", branch)
+	if err != nil {
+		return fmt.Errorf("unable to git checkout: %s", err)
+	}
+	return nil
+}
+
+// CheckoutNewBranch checkouts a new branch on the local repository
+func (r Repo) CheckoutNewBranch(branch string) error {
+	_, err := r.runCmd("git", "checkout", "-b", branch)
+	if err != nil {
+		return fmt.Errorf("unable to git checkout: %s", err)
+	}
+	return nil
+}
+
+// DeleteBranch deletes a branch on the local repository
+func (r Repo) DeleteBranch(branch string) error {
+	_, err := r.runCmd("git", "branch", "-d", branch)
+	if err != nil {
+		return fmt.Errorf("unable to delete branch: %s", err)
+	}
+	return nil
+}
+
 // Pull pulls a branch from a remote
 func (r Repo) Pull(remote, branch string) error {
 	_, err := r.runCmd("git", "pull", remote, branch)
@@ -242,10 +269,51 @@ func (r Repo) Glob(s string) ([]string, error) {
 	return files, nil
 }
 
-// Open opens a file form the repo
+// Open opens a file from the repo
 func (r Repo) Open(s string) (*os.File, error) {
 	p := filepath.Join(r.path, s)
 	return os.Open(p)
+}
+
+// Write writes a file in the repo
+func (r Repo) Write(s string, content io.Reader) error {
+	p := filepath.Join(r.path, s)
+	f, err := os.OpenFile(p, os.O_WRONLY, os.FileMode(0644))
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, content); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Add file contents to the index
+func (r Repo) Add(s ...string) error {
+	args := append([]string{"add"}, s...)
+	_, err := r.runCmd("git", args...)
+	if err != nil {
+		return fmt.Errorf("command 'git add' failed: %v", err)
+	}
+	return nil
+}
+
+// Commit the index
+func (r Repo) Commit(m string) error {
+	_, err := r.runCmd("git", "commit", "-m", m)
+	if err != nil {
+		return fmt.Errorf("command 'git commit' failed: %v", err)
+	}
+	return nil
+}
+
+// Push (always with force) the branch
+func (r Repo) Push(remote, branch string) error {
+	_, err := r.runCmd("git", "push", "-f", "-u", remote, branch)
+	if err != nil {
+		return fmt.Errorf("command 'git push' failed: %v", err)
+	}
+	return nil
 }
 
 // Option is a function option
