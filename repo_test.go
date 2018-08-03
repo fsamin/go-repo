@@ -282,7 +282,11 @@ func TestPush(t *testing.T) {
 	path := filepath.Join("testdata", "testClone")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
-	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+
+	privateKey, err := ioutil.ReadFile("travis_id_rsa")
+	assert.NoError(t, err, "unable to read private key file")
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithSSHAuth(privateKey))
 	assert.NoError(t, err)
 
 	assert.NoError(t, r.CheckoutNewBranch("TestBranch"))
