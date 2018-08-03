@@ -279,7 +279,7 @@ func TestCheckoutNewBranch_Checkout_DeleteBranch(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
+	path := filepath.Join("testdata", "TestPush")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
 
