@@ -286,7 +286,7 @@ func TestPush(t *testing.T) {
 	privateKey, err := ioutil.ReadFile("travis_id_rsa")
 	assert.NoError(t, err, "unable to read private key file")
 
-	r, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(privateKey))
+	r, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(privateKey), WithUser("francois.samin+github@gmail.com", "fsamin"))
 	assert.NoError(t, err)
 
 	assert.NoError(t, r.CheckoutNewBranch("TestBranch"))

@@ -344,6 +344,21 @@ func (r Repo) Push(remote, branch string) error {
 // Option is a function option
 type Option func(r *Repo) error
 
+// WithUser configure the git command to use user
+func WithUser(email, name string) Option {
+	return func(r *Repo) error {
+		out, err := r.runCmd("git", "config", "--local", "user.email", email)
+		if err != nil {
+			return fmt.Errorf("command 'git config --global user.email' failed: %v (%s)", err, out)
+		}
+		out, err = r.runCmd("git", "config", "--local", "user.name", name)
+		if err != nil {
+			return fmt.Errorf("command 'git config --global user.name' failed: %v (%s)", err, out)
+		}
+		return err
+	}
+}
+
 // WithSSHAuth configure the git command to use a specific private key
 func WithSSHAuth(privateKey []byte) Option {
 	return func(r *Repo) error {
