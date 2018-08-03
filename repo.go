@@ -316,18 +316,18 @@ func (r Repo) Write(s string, content io.Reader) error {
 // Add file contents to the index
 func (r Repo) Add(s ...string) error {
 	args := append([]string{"add"}, s...)
-	_, err := r.runCmd("git", args...)
+	out, err := r.runCmd("git", args...)
 	if err != nil {
-		return fmt.Errorf("command 'git add' failed: %v", err)
+		return fmt.Errorf("command 'git add' failed: %v (%s)", err, out)
 	}
 	return nil
 }
 
 // Commit the index
 func (r Repo) Commit(m string) error {
-	_, err := r.runCmd("git", "commit", "-m", m)
+	out, err := r.runCmd("git", "commit", "-m", m)
 	if err != nil {
-		return fmt.Errorf("command 'git commit' failed: %v", err)
+		return fmt.Errorf("command 'git commit' failed: %v (%s)", err, out)
 	}
 	return nil
 }
