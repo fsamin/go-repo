@@ -334,9 +334,9 @@ func (r Repo) Commit(m string) error {
 
 // Push (always with force) the branch
 func (r Repo) Push(remote, branch string) error {
-	_, err := r.runCmd("git", "push", "-f", "-u", remote, branch)
+	out, err := r.runCmd("git", "push", "-f", "-u", remote, branch)
 	if err != nil {
-		return fmt.Errorf("command 'git push' failed: %v", err)
+		return fmt.Errorf("command 'git push' failed: %v (%s)", err, out)
 	}
 	return nil
 }
