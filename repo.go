@@ -347,11 +347,11 @@ type Option func(r *Repo) error
 // WithUser configure the git command to use user
 func WithUser(email, name string) Option {
 	return func(r *Repo) error {
-		out, err := r.runCmd("git", "config", "--local", "user.email", email)
+		out, err := r.runCmd("git", "config", "--global", "user.email", email)
 		if err != nil {
 			return fmt.Errorf("command 'git config --global user.email' failed: %v (%s)", err, out)
 		}
-		out, err = r.runCmd("git", "config", "--local", "user.name", name)
+		out, err = r.runCmd("git", "config", "--global", "user.name", name)
 		if err != nil {
 			return fmt.Errorf("command 'git config --global user.name' failed: %v (%s)", err, out)
 		}
