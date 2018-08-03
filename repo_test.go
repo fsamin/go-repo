@@ -59,7 +59,7 @@ func TestCloneFromSSHShouldSuccess(t *testing.T) {
 	path := filepath.Join("testdata", "TestCloneFromSSHShouldSuccess")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
-	pkey, _ := ioutil.ReadFile("id_rsa_test")
+	pkey, _ := ioutil.ReadFile("travis_id_rsa")
 	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
 	assert.NoError(t, err)
 }
@@ -279,9 +279,6 @@ func TestCheckoutNewBranch_Checkout_DeleteBranch(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
-	if os.Getenv("GOPATH") == "/home/travis/gopath" {
-		t.SkipNow()
-	}
 	path := filepath.Join("testdata", "TestPush")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
