@@ -279,6 +279,9 @@ func TestCheckoutNewBranch_Checkout_DeleteBranch(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
+	if os.Getenv("GOPATH") == "/home/travis/gopath" {
+		t.SkipNow()
+	}
 	path := filepath.Join("testdata", "TestPush")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
