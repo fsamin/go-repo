@@ -325,7 +325,7 @@ func (r Repo) Add(s ...string) error {
 
 // Commit the index
 func (r Repo) Commit(m string) error {
-	out, err := r.runCmd("git", "commit", "-m", m)
+	out, err := r.runCmd("git", "commit", "-m", strconv.Quote(m))
 	if err != nil {
 		return fmt.Errorf("command 'git commit' failed: %v (%s)", err, out)
 	}
