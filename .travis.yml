@@ -5,6 +5,9 @@ go:
 - 1.10.x
 - tip
 - master
+branches:
+  except:
+  - TestBranch
 before_install:
 - openssl aes-256-cbc -K $encrypted_3973f9013d3c_key -iv $encrypted_3973f9013d3c_iv
   -in travis_id_rsa.enc -out travis_id_rsa -d
