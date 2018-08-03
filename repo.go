@@ -101,7 +101,7 @@ func (r Repo) LocalConfigSet(section, key, value string) error {
 	conf, _ := r.LocalConfigGet(section, key)
 	s := fmt.Sprintf("%s.%s", section, key)
 	if conf != "" {
-		if _, err := r.runCmd("git", "config", "--local", "--unset", s); err != nil {
+		if _, err := r.runCmd("git", "config", "--local", "--unset-all", s); err != nil {
 			return err
 		}
 	}
@@ -196,9 +196,34 @@ func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	if _, err := r.runCmd("git", "fetch"); err != nil {
 		return fmt.Errorf("unable to git fetch: %s", err)
 	}
+
+	var branchExist bool
+	if _, err := r.runCmd("git", "rev-parse", "--verify", branch); err == nil {
+		branchExist = true
+	}
+
+	var hasUpstream bool
+	if _, err := r.runCmd("git", "rev-parse", "--abbrev-ref", branch+"@{upstream}"); err == nil {
+		hasUpstream = true
+	}
+
+	if branchExist {
+		if hasUpstream {
+			_, err := r.runCmd("git", "checkout", branch)
+			if err != nil {
+				return fmt.Errorf("unable to git checkout: %s", err)
+			}
+			return nil
+		}
+		// the branch exist but has no upstream. Delete it
+		if _, err := r.runCmd("git", "branch", "-d", branch); err != nil {
+			return fmt.Errorf("unable to git delete: %s", err)
+		}
+	}
+
 	_, err := r.runCmd("git", "checkout", "-b", branch, "--track", remote+"/"+branch)
 	if err != nil {
-		return fmt.Errorf("unable to git checkout: %s", err)
+		return fmt.Errorf("unable to git checkout new branch: %s", err)
 	}
 	return nil
 }

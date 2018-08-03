@@ -91,6 +91,12 @@ func TestFetchRemoteBranch(t *testing.T) {
 	b, err := r.CurrentBranch()
 	assert.NoError(t, err)
 	assert.Equal(t, "tests", b)
+	err = r.FetchRemoteBranch("origin", "master")
+	assert.NoError(t, err)
+	b, err = r.CurrentBranch()
+	assert.NoError(t, err)
+	assert.Equal(t, "master", b)
+
 }
 
 func TestPull(t *testing.T) {
