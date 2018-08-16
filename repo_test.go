@@ -298,3 +298,14 @@ func TestPush(t *testing.T) {
 	assert.NoError(t, r.Commit("This is a test"))
 	assert.NoError(t, r.Push("origin", "TestBranch"))
 }
+
+func TestHasDiverged(t *testing.T) {
+	path := filepath.Join("testdata", "TestHasDiverged")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+	hasDiverged, err := r.HasDiverged()
+	assert.NoError(t, err)
+	assert.False(t, hasDiverged)
+}
