@@ -175,7 +175,7 @@ func Test_trimURL(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "https://francois.samin@stash.ovh.net/scm/ovh/cds.git",
+			name:    "https://francois.samin@my.gitserver.net/scm/ovh/cds.git",
 			args:    args{"https://francois.samin@my.gitserver.net/scm/ovh/cds.git"},
 			want:    "ovh/cds",
 			wantErr: false,
