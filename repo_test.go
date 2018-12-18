@@ -309,3 +309,16 @@ func TestHasDiverged(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, hasDiverged)
 }
+
+func TestRemove(t *testing.T) {
+	path := filepath.Join("testdata", "TestRemove")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+	assert.NoError(t, r.Remove("cmd.go"))
+
+	status, err := r.Status()
+	assert.NoError(t, err)
+	assert.True(t, strings.Contains(status, "deleted"))
+}
