@@ -325,7 +325,7 @@ func (r Repo) Add(s ...string) error {
 
 // Remove file or directory
 func (r Repo) Remove(s ...string) error {
-	args := append([]string{"rm", "-f"}, s...)
+	args := append([]string{"rm", "-f", "-r"}, s...)
 	out, err := r.runCmd("git", args...)
 	if err != nil {
 		return fmt.Errorf("command 'git rm' failed: %v (%s)", err, out)
