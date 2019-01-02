@@ -322,3 +322,18 @@ func TestRemove(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, strings.Contains(status, "deleted"))
 }
+
+func TestCommitWithUser(t *testing.T) {
+	path := filepath.Join("testdata", "TestCommitWithUser")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+	assert.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	assert.NoError(t, r.Add("README.md"))
+	assert.NoError(t, r.Commit("This is a test", WithUser("foo@bar.com", "foo.bar")))
+	commit, err := r.LatestCommit()
+	assert.NoError(t, err)
+	assert.Equal(t, "foo.bar", commit.Author)
+}
