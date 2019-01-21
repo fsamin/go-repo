@@ -18,6 +18,15 @@ func TestClone(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestCloneWithError(t *testing.T) {
+	path := filepath.Join("testdata", "TestClone")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	_, err := Clone(path, "https://github.com/fsamin/this-repo-does-not-exist.git")
+	t.Logf("Error is : '%v'", err)
+	assert.Error(t, err)
+}
+
 // This is test rsa key, don't use it please
 var testRSAKey = []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAsP/EsqVsJkb+pStaZkm33MYF+t6y1OzM5gP+wO6ckdWCcp9V
