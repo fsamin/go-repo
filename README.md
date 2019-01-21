@@ -1,6 +1,4 @@
-# go-repo
-
-Go-Repo is just wrapper arround git commands.
+this is a testRepo is just wrapper arround git commands.
 
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/fsamin/go-repo) [![Build Status](https://travis-ci.org/fsamin/go-repo.svg?branch=master)](https://travis-ci.org/fsamin/go-repo) [![Go Report Card](https://goreportcard.com/badge/github.com/fsamin/go-repo)](https://goreportcard.com/report/github.com/fsamin/go-repo)
 
