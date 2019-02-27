@@ -287,6 +287,25 @@ func TestCheckoutNewBranch_Checkout_DeleteBranch(t *testing.T) {
 	assert.NoError(t, r.DeleteBranch("newBranch"))
 }
 
+func TestPushError(t *testing.T) {
+	path := filepath.Join("testdata", "TestPushError")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
+	assert.NoError(t, err)
+
+	assert.NoError(t, r.CheckoutNewBranch("TestBranch"))
+	assert.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	assert.NoError(t, r.Add("README.md"))
+	assert.NoError(t, r.Commit("This is a test"))
+
+	errPush := r.Push("origin", "TestBranch")
+	assert.Error(t, errPush)
+	assert.Contains(t, errPush.Error(), "https://github.com/fsamin/go-repo.git")
+	assert.NotContains(t, errPush.Error(), "mypassword")
+}
+
 func TestPush(t *testing.T) {
 	if os.Getenv("TRAVIS_BUILD_DIR") != "" {
 		t.SkipNow()
