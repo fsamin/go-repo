@@ -10,6 +10,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNew(t *testing.T) {
+	path := filepath.Join("testdata")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := New("testdata")
+	assert.NoError(t, err)
+	t.Log(r.path)
+}
+
 func TestClone(t *testing.T) {
 	path := filepath.Join("testdata", "TestClone")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
@@ -68,8 +77,11 @@ func TestCloneFromSSHShouldSuccess(t *testing.T) {
 	path := filepath.Join("testdata", "TestCloneFromSSHShouldSuccess")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	defer os.RemoveAll("testdata")
-	pkey, _ := ioutil.ReadFile("travis_id_rsa")
-	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
+	pkey, err := ioutil.ReadFile("travis_id_rsa")
+	if err != nil {
+		t.SkipNow()
+	}
+	_, err = Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
 	assert.NoError(t, err)
 }
 
@@ -315,7 +327,9 @@ func TestPush(t *testing.T) {
 	defer os.RemoveAll("testdata")
 
 	privateKey, err := ioutil.ReadFile("travis_id_rsa")
-	assert.NoError(t, err, "unable to read private key file")
+	if err != nil {
+		t.SkipNow()
+	}
 
 	r, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(privateKey), WithUser("francois.samin+github@gmail.com", "fsamin"))
 	assert.NoError(t, err)
@@ -348,7 +362,8 @@ func TestRemove(t *testing.T) {
 
 	status, err := r.Status()
 	assert.NoError(t, err)
-	assert.True(t, strings.Contains(status, "deleted"))
+	t.Log(status)
+	assert.True(t, strings.Contains(status, "D"))
 }
 
 func TestCommitWithUser(t *testing.T) {
