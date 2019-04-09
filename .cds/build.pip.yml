@@ -1,0 +1,12 @@
+version: v1.0
+name: build
+jobs:
+- job: New Job
+  steps:
+  - checkout: '{{.cds.workspace}}'
+  - script:
+    - cd api
+    - maven package
+  requirements:
+  - binary: git
+  - binary: mvn
