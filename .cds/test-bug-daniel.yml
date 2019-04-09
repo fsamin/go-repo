@@ -1,0 +1,14 @@
+name: test-bug-daniel
+version: v1.0
+pipeline: build
+payload:
+  git.author: ""
+  git.branch: master
+  git.hash: ""
+  git.hash.before: ""
+  git.message: ""
+  git.repository: fsamin/go-repo
+  git.tag: ""
+application: go-repo
+metadata:
+  default_tags: git.branch,git.author
