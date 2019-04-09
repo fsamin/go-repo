@@ -1,0 +1,4 @@
+version: v1.0
+name: go-repo
+vcs_server: github
+repo: fsamin/go-repo
