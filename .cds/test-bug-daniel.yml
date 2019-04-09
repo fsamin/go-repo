@@ -1,0 +1,6 @@
+name: test-bug-daniel
+version: v1.0
+pipeline: build
+application: go-repo
+metadata:
+  default_tags: git.branch,git.author
