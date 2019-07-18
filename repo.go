@@ -423,12 +423,11 @@ func (r Repo) ResetHard(hash string) error {
 
 // DefaultBranch returns the default branch of the remote origin
 func (r Repo) DefaultBranch() (string, error) {
-	s, err := r.runCmd("git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	s, err := r.runCmd("git", "symbolic-ref", "--short", "HEAD")
 	if err != nil {
 		return "", err
 	}
 	s = strings.Replace(s, "\n", "", 1)
-	s = strings.Replace(s, "refs/remotes/origin/", "", 1)
 	return s, nil
 }
 
