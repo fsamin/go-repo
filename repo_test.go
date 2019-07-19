@@ -101,6 +101,29 @@ func TestCurrentBranch(t *testing.T) {
 	assert.NotEmpty(t, b)
 }
 
+func TestFetchRemoteTag(t *testing.T) {
+	path := filepath.Join("testdata", "testFetchRemoteTag")
+	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	assert.NoError(t, err)
+	err = r.FetchRemoteTag("origin", "v0.1.0")
+	assert.NoError(t, err)
+	b, err := r.CurrentBranch()
+	assert.NoError(t, err)
+	assert.Equal(t, "v0.1.0", b)
+	err = r.FetchRemoteTag("origin", "v0.1.1")
+	assert.NoError(t, err)
+	b, err = r.CurrentBranch()
+	assert.NoError(t, err)
+	assert.Equal(t, "v0.1.1", b)
+	err = r.FetchRemoteTag("origin", "v0.1.0")
+	assert.NoError(t, err)
+	b, err = r.CurrentBranch()
+	assert.NoError(t, err)
+	assert.Equal(t, "v0.1.0", b)
+}
+
 func TestFetchRemoteBranch(t *testing.T) {
 	path := filepath.Join("testdata", "testClone")
 	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
