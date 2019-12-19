@@ -345,6 +345,15 @@ func (r Repo) CurrentBranch() (string, error) {
 	return b[:len(b)-1], nil
 }
 
+// VerifyTag returns the sha1 of the tag if exists, if it doesn't exist, it returns an error
+func (r Repo) VerifyTag(tag string) (string, error) {
+	sha1, err := r.runCmd("git", "rev-parse", "--verify", tag)
+	if err != nil {
+		return "", fmt.Errorf("tag not found: %v", err)
+	}
+	return sha1[:len(sha1)-1], nil
+}
+
 // FetchRemoteTag runs a git fetch then checkout the remote tag
 func (r Repo) FetchRemoteTag(remote, tag string) error {
 	// delete tag if exist
