@@ -8,29 +8,31 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	path := filepath.Join("testdata")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	r, err := New("testdata")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t.Log(r.path)
 }
 
 func TestClone(t *testing.T) {
-	path := filepath.Join("testdata", "TestClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
-	_, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")))
+	require.NoError(t, err)
 }
 
 func TestCloneWithError(t *testing.T) {
-	path := filepath.Join("testdata", "TestClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	_, err := Clone(path, "https://github.com/fsamin/this-repo-does-not-exist.git")
 	t.Logf("Error is : '%v'", err)
 	assert.Error(t, err)
@@ -66,108 +68,118 @@ tUQx5iDRVkQ61qdoFdD7MR7oQlRkrGRrH1nHDs2dXlpPQ14lGowkGg==
 -----END RSA PRIVATE KEY-----`)
 
 func TestCloneFromSSHShouldFailed(t *testing.T) {
-	path := filepath.Join("testdata", "TestCloneFromSSHShouldFailed")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(testRSAKey), WithVerbose())
 	assert.Error(t, err)
 }
 
 func TestCloneFromSSHShouldSuccess(t *testing.T) {
-	path := filepath.Join("testdata", "TestCloneFromSSHShouldSuccess")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	pkey, err := ioutil.ReadFile("travis_id_rsa")
 	if err != nil {
 		t.SkipNow()
 	}
 	_, err = Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestCloneFromHTTPShouldSuccess(t *testing.T) {
-	path := filepath.Join("testdata", "TestCloneFromHTTPShouldSuccess")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")), WithVerbose())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestCurrentBranch(t *testing.T) {
 	r, err := New(".")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err := r.CurrentBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEmpty(t, b)
 }
 
 func TestFetchRemoteTag(t *testing.T) {
-	path := filepath.Join("testdata", "testFetchRemoteTag")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
-	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")))
+	require.NoError(t, err)
+
 	err = r.FetchRemoteTag("origin", "v0.1.0")
-	assert.NoError(t, err)
-	b, err := r.CurrentBranch()
-	assert.NoError(t, err)
-	assert.Equal(t, "v0.1.0", b)
+	require.NoError(t, err)
+
+	sha1, err := r.VerifyTag("v0.1.0")
+	require.NoError(t, err)
+	assert.Equal(t, "7abae771a5d8690b24993971238bbf3b93b6961b", sha1)
+
 	err = r.FetchRemoteTag("origin", "v0.1.1")
-	assert.NoError(t, err)
-	b, err = r.CurrentBranch()
-	assert.NoError(t, err)
-	assert.Equal(t, "v0.1.1", b)
-	err = r.FetchRemoteTag("origin", "v0.1.0")
-	assert.NoError(t, err)
-	b, err = r.CurrentBranch()
-	assert.NoError(t, err)
-	assert.Equal(t, "v0.1.0", b)
+	require.NoError(t, err)
+
+	sha1, err = r.VerifyTag("v0.1.1")
+	require.NoError(t, err)
+	assert.Equal(t, "29d80ac945280d30bb3f2442b1d0e894d8dcb4a1", sha1)
 }
 
 func TestFetchRemoteBranch(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = r.FetchRemoteBranch("origin", "tests")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err := r.CurrentBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "tests", b)
 	err = r.FetchRemoteBranch("origin", "master")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err = r.CurrentBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "master", b)
 
 }
 
 func TestPull(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = r.FetchRemoteBranch("origin", "tests")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err := r.CurrentBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "tests", b)
 	err = r.Pull("origin", "tests")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestResetHard(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = r.FetchRemoteBranch("origin", "tests")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = r.ResetHard("7fc6e6ff62133460b7f288043db6e47edf5dd6aa")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestNewWithError(t *testing.T) {
@@ -177,15 +189,15 @@ func TestNewWithError(t *testing.T) {
 
 func TestFetchURL(t *testing.T) {
 	r, err := New(".")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	u, err := r.FetchURL()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Logf("url: %v", u)
 
 	n, err := r.Name()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Logf("name: %v", n)
 }
@@ -241,45 +253,48 @@ func Test_trimURL(t *testing.T) {
 
 func TestLocalConfigGet(t *testing.T) {
 	r, err := New(".")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, r.LocalConfigSet("foo", "bar", "value"))
+	require.NoError(t, r.LocalConfigSet("foo", "bar", "value"))
 
 	val, err := r.LocalConfigGet("foo", "bar")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "value", val)
 }
 
 func TestLatestCommit(t *testing.T) {
 	r, err := New(".")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	c, err := r.LatestCommit()
 	t.Logf("%+v", c)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestDefaultBranch(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	s, err := r.DefaultBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "master", s)
 }
 
 func TestGlob(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	files, err := r.Glob("**/*.md")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var readmeFound, licenceFound bool
 	for _, f := range files {
 		switch f {
@@ -294,16 +309,18 @@ func TestGlob(t *testing.T) {
 }
 
 func TestOpen(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	files, err := r.Glob("**/*.md")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	f, err := r.Open(files[0])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, f)
 	if err != nil {
 		f.Close()
@@ -311,29 +328,31 @@ func TestOpen(t *testing.T) {
 }
 
 func TestCheckoutNewBranch_Checkout_DeleteBranch(t *testing.T) {
-	path := filepath.Join("testdata", "testClone")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
-	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
 
-	assert.NoError(t, r.CheckoutNewBranch("newBranch"))
-	assert.NoError(t, r.Checkout("master"))
-	assert.NoError(t, r.DeleteBranch("newBranch"))
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+
+	require.NoError(t, r.CheckoutNewBranch("newBranch"))
+	require.NoError(t, r.Checkout("master"))
+	require.NoError(t, r.DeleteBranch("newBranch"))
 }
 
 func TestPushError(t *testing.T) {
-	path := filepath.Join("testdata", "TestPushError")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, r.CheckoutNewBranch("TestBranch"))
-	assert.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
-	assert.NoError(t, r.Add("README.md"))
-	assert.NoError(t, r.Commit("This is a test"))
+	require.NoError(t, r.CheckoutNewBranch("TestBranch"))
+	require.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add("README.md"))
+	require.NoError(t, r.Commit("This is a test"))
 
 	errPush := r.Push("origin", "TestBranch")
 	assert.Error(t, errPush)
@@ -345,9 +364,10 @@ func TestPush(t *testing.T) {
 	if os.Getenv("TRAVIS_BUILD_DIR") != "" {
 		t.SkipNow()
 	}
-	path := filepath.Join("testdata", "TestPush")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 
 	privateKey, err := ioutil.ReadFile("travis_id_rsa")
 	if err != nil {
@@ -355,51 +375,56 @@ func TestPush(t *testing.T) {
 	}
 
 	r, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(privateKey), WithUser("francois.samin+github@gmail.com", "fsamin"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, r.CheckoutNewBranch("TestBranch"))
-	assert.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
-	assert.NoError(t, r.Add("README.md"))
-	assert.NoError(t, r.Commit("This is a test"))
-	assert.NoError(t, r.Push("origin", "TestBranch"))
+	require.NoError(t, r.CheckoutNewBranch("TestBranch"))
+	require.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add("README.md"))
+	require.NoError(t, r.Commit("This is a test"))
+	require.NoError(t, r.Push("origin", "TestBranch"))
 }
 
 func TestHasDiverged(t *testing.T) {
-	path := filepath.Join("testdata", "TestHasDiverged")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	hasDiverged, err := r.HasDiverged()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, hasDiverged)
 }
 
 func TestRemove(t *testing.T) {
-	path := filepath.Join("testdata", "TestRemove")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
-	assert.NoError(t, r.Remove("cmd.go"))
+	require.NoError(t, err)
+	require.NoError(t, r.Remove("cmd.go"))
 
 	status, err := r.Status()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	t.Log(status)
 	assert.True(t, strings.Contains(status, "D"))
 }
 
 func TestCommitWithUser(t *testing.T) {
-	path := filepath.Join("testdata", "TestCommitWithUser")
-	assert.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	defer os.RemoveAll("testdata")
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 
 	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
-	assert.NoError(t, err)
-	assert.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
-	assert.NoError(t, r.Add("README.md"))
-	assert.NoError(t, r.Commit("This is a test", WithUser("foo@bar.com", "foo.bar")))
+	require.NoError(t, err)
+	require.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add("README.md"))
+	require.NoError(t, r.Commit("This is a test", WithUser("foo@bar.com", "foo.bar")))
 	commit, err := r.LatestCommit()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "foo.bar", commit.Author)
 }
