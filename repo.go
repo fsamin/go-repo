@@ -313,6 +313,33 @@ func (r Repo) GetCommit(hash string) (Commit, error) {
 	c.Author = splittedDetails[1]
 	c.Subject = splittedDetails[2]
 	c.Body = splittedDetails[3]
+	return c, err
+}
+
+// GetCommitWithDiff return the commit data with the parsed diff
+func (r Repo) GetCommitWithDiff(hash string) (Commit, error) {
+	hash = strings.TrimFunc(hash, func(r rune) bool {
+		return r == '\n' || r == ' ' || r == '\t'
+	})
+	c := Commit{}
+	details, err := r.runCmd("git", "show", hash, "--pretty=%at||%an||%s||%b||", "--name-status")
+	if err != nil {
+		return c, err
+	}
+
+	c.LongHash = hash[:len(hash)-1]
+	c.Hash = hash[:7]
+
+	splittedDetails := strings.SplitN(details, "||", 5)
+
+	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
+	if err != nil {
+		return c, err
+	}
+	c.Date = time.Unix(ts, 0)
+	c.Author = splittedDetails[1]
+	c.Subject = splittedDetails[2]
+	c.Body = splittedDetails[3]
 
 	fileList := strings.TrimSpace(splittedDetails[4])
 	c.Files, err = r.parseDiff(hash, fileList)
@@ -493,7 +520,7 @@ func (r Repo) Open(s string) (*os.File, error) {
 // Write writes a file in the repo
 func (r Repo) Write(s string, content io.Reader) error {
 	p := filepath.Join(r.path, s)
-	f, err := os.OpenFile(p, os.O_WRONLY, os.FileMode(0644))
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY, os.FileMode(0644))
 	if err != nil {
 		return err
 	}
