@@ -360,6 +360,26 @@ func TestPushError(t *testing.T) {
 	assert.NotContains(t, errPush.Error(), "mypassword")
 }
 
+func TestCheckCommit(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
+	require.NoError(t, err)
+
+	require.NoError(t, r.CheckoutNewBranch("TestBranch"))
+	require.NoError(t, r.Write("README2.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add("README2.md"))
+	require.NoError(t, r.Commit("This is a test"))
+	c, err := r.LatestCommit()
+	require.NoError(t, err)
+
+	_, err = r.GetCommit(c.Hash)
+	require.NoError(t, err)
+}
+
 func TestPush(t *testing.T) {
 	if os.Getenv("TRAVIS_BUILD_DIR") != "" {
 		t.SkipNow()
