@@ -300,7 +300,7 @@ func (r Repo) GetCommit(hash string) (Commit, error) {
 		return c, err
 	}
 
-	c.LongHash = hash[:len(hash)-1]
+	c.LongHash = hash
 	c.Hash = hash[:7]
 
 	splittedDetails := strings.SplitN(details, "||", 5)
