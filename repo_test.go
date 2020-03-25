@@ -131,6 +131,29 @@ func TestFetchRemoteTag(t *testing.T) {
 	assert.Equal(t, "29d80ac945280d30bb3f2442b1d0e894d8dcb4a1", sha1)
 }
 
+func TestLocalBranchExists(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+
+	exists, hasUpstream := r.LocalBranchExists("tests")
+	assert.False(t, exists)
+	assert.False(t, hasUpstream)
+
+	require.NoError(t, r.Checkout("tests"))
+	exists, hasUpstream = r.LocalBranchExists("tests")
+	assert.True(t, exists)
+	assert.True(t, hasUpstream)
+
+	require.NoError(t, r.CheckoutNewBranch("unknown"))
+	exists, hasUpstream = r.LocalBranchExists("unknown")
+	assert.True(t, exists)
+	assert.False(t, hasUpstream)
+}
+
 func TestFetchRemoteBranch(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
@@ -149,7 +172,6 @@ func TestFetchRemoteBranch(t *testing.T) {
 	b, err = r.CurrentBranch()
 	require.NoError(t, err)
 	assert.Equal(t, "master", b)
-
 }
 
 func TestPull(t *testing.T) {

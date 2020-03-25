@@ -402,22 +402,24 @@ func (r Repo) FetchRemoteTag(remote, tag string) error {
 	return nil
 }
 
+// LocalBranchExists returns if given branch exists locally and has upstream.
+func (r Repo) LocalBranchExists(branch string) (exists, hasUpstream bool) {
+	if _, err := r.runCmd("git", "rev-parse", "--verify", branch); err == nil {
+		exists = true
+	}
+	if _, err := r.runCmd("git", "rev-parse", "--abbrev-ref", branch+"@{upstream}"); err == nil {
+		hasUpstream = true
+	}
+	return
+}
+
 // FetchRemoteBranch runs a git fetch then checkout the remote branch
 func (r Repo) FetchRemoteBranch(remote, branch string) error {
 	if _, err := r.runCmd("git", "fetch"); err != nil {
 		return fmt.Errorf("unable to git fetch: %s", err)
 	}
 
-	var branchExist bool
-	if _, err := r.runCmd("git", "rev-parse", "--verify", branch); err == nil {
-		branchExist = true
-	}
-
-	var hasUpstream bool
-	if _, err := r.runCmd("git", "rev-parse", "--abbrev-ref", branch+"@{upstream}"); err == nil {
-		hasUpstream = true
-	}
-
+	branchExist, hasUpstream := r.LocalBranchExists(branch)
 	if branchExist {
 		if hasUpstream {
 			_, err := r.runCmd("git", "checkout", branch)
