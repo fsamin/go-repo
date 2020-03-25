@@ -130,6 +130,19 @@ func TestFetchRemoteTag(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "29d80ac945280d30bb3f2442b1d0e894d8dcb4a1", sha1)
 }
+func TestExistsDiff(t *testing.T) {
+	path := filepath.Join("testdata", "testClone")
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	defer os.RemoveAll("testdata")
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+	assert.False(t, r.ExistsDiff())
+
+	require.NoError(t, ioutil.WriteFile(path+"/test.txt", []byte("test"), 0755))
+	require.NoError(t, r.Add("test.txt"))
+	assert.True(t, r.ExistsDiff())
+}
 
 func TestLocalBranchExists(t *testing.T) {
 	path := filepath.Join("testdata", "testClone")

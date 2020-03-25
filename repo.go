@@ -353,6 +353,14 @@ func (r Repo) Diff(hash string, filename string) (string, error) {
 	return r.runCmd("git", "show", hash, "--pretty=", "--", filename)
 }
 
+// ExistsDiff returns true if there are no commited diff in the repo.
+func (r Repo) ExistsDiff() bool {
+	if _, err := r.runCmd("git", "diff", "--quiet", "HEAD", "--"); err != nil {
+		return true
+	}
+	return false
+}
+
 // LatestCommit returns the latest commit of the current branch
 func (r Repo) LatestCommit() (Commit, error) {
 	c := Commit{}
