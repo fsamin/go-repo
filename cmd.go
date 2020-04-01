@@ -50,5 +50,11 @@ func (r Repo) runCmd(name string, args ...string) (stdOut string, err error) {
 		return stdOut, fmt.Errorf("%s (%v)", stdErr, runErr)
 	}
 
-	return stdOut, nil
+	btes := []byte(stdOut)
+	// replace CR LF \r\n (windows) with LF \n (unix)
+	btes = bytes.Replace(btes, []byte{13, 10}, []byte{10}, -1)
+	// replace CF \r (mac) with LF \n (unix)
+	btes = bytes.Replace(btes, []byte{13}, []byte{10}, -1)
+
+	return string(btes), nil
 }

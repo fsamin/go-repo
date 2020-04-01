@@ -94,3 +94,7 @@ type PGPKey struct {
 	Private string
 	ID      string
 }
+
+type BareRepo struct {
+	repo Repo
+}
