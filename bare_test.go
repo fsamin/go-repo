@@ -28,6 +28,11 @@ func TestBare(t *testing.T) {
 	assert.True(t, len(files) > 1)
 	t.Logf("%+v", files)
 
+	size, err := repo.FileSize("README.md")
+	require.NoError(t, err)
+	assert.NotEqual(t, -1, size)
+	assert.True(t, size > 100)
+
 	readmeReader, err := repo.ReadFile("README.md")
 	require.NoError(t, err)
 	readmeContent, err := ioutil.ReadAll(readmeReader)

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -84,6 +86,30 @@ func (b BareRepo) ListFiles() ([]string, error) {
 	output = strings.TrimSpace(output)
 	files := strings.Split(output, "\n")
 	return files, nil
+}
+
+var singleSpacePattern = regexp.MustCompile(`\s+`)
+
+func (b BareRepo) FileSize(filename string) (int64, error) {
+
+	output, err := b.repo.runCmd("git", "ls-tree", "--full-tree", "--long", "-r", "HEAD")
+	if err != nil {
+		return -1, err
+	}
+	output = strings.TrimSpace(output)
+	files := strings.Split(output, "\n")
+	for _, file := range files {
+		file = strings.Replace(file, "\t", " ", -1)
+		file = singleSpacePattern.ReplaceAllString(file, " ")
+		tuple := strings.SplitN(file, " ", 5)
+		if len(tuple) != 5 {
+			return -1, errors.New("unable to file size: " + file)
+		}
+		if tuple[4] == filename {
+			return strconv.ParseInt(tuple[3], 10, 64)
+		}
+	}
+	return -1, errors.New("unable to file size: file " + filename + " not found")
 }
 
 func (b BareRepo) ReadFile(filename string) (io.Reader, error) {
