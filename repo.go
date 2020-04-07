@@ -575,7 +575,12 @@ func (r Repo) Commit(m string, opts ...Option) error {
 }
 
 // Push (always with force) the branch
-func (r Repo) Push(remote, branch string) error {
+func (r Repo) Push(remote, branch string, opts ...Option) error {
+	for _, f := range opts {
+		if err := f(&r); err != nil {
+			return err
+		}
+	}
 	out, err := r.runCmd("git", "push", "-f", "-u", remote, branch)
 	if err != nil {
 		errS := fmt.Sprintf("%v", err)
@@ -590,9 +595,34 @@ func (r Repo) Push(remote, branch string) error {
 	return nil
 }
 
+// RemoteAdd run git remote add
+func (r Repo) RemoteAdd(remote, branch, url string) error {
+	var args []string
+	if branch != "" {
+		args = []string{"remote", "add", "-t", branch, remote, url}
+	} else {
+		args = []string{"remote", "add", remote, url}
+	}
+	out, err := r.runCmd("git", args...)
+	if err != nil {
+		return fmt.Errorf("command 'git remote add' failed: %v (%s)", err, out)
+	}
+	return nil
+}
+
+// RemoteShow run git remote add
+func (r Repo) RemoteShow(remote string) (string, error) {
+	args := []string{"remote", "show", remote}
+	out, err := r.runCmd("git", args...)
+	if err != nil {
+		return out, fmt.Errorf("command 'git remote show' failed: %v (%s)", err, out)
+	}
+	return out, nil
+}
+
 // Status run the git status command
 func (r Repo) Status() (string, error) {
-	args := append([]string{"status", "-s", "-uall"})
+	args := []string{"status", "-s", "-uall"}
 	out, err := r.runCmd("git", args...)
 	if err != nil {
 		return "", fmt.Errorf("command 'git status' failed: %v (%s)", err, out)

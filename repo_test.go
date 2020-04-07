@@ -393,6 +393,11 @@ func TestPushError(t *testing.T) {
 	assert.Error(t, errPush)
 	assert.Contains(t, errPush.Error(), "https://github.com/fsamin/go-repo.git")
 	assert.NotContains(t, errPush.Error(), "mypassword")
+
+	errPush = r.Push("origin", "TestBranch", WithHTTPAuth("user", "mypassword2"))
+	assert.Error(t, errPush)
+	assert.Contains(t, errPush.Error(), "https://github.com/fsamin/go-repo.git")
+	assert.NotContains(t, errPush.Error(), "mypassword2")
 }
 
 func TestCheckCommit(t *testing.T) {
@@ -437,6 +442,20 @@ func TestPush(t *testing.T) {
 	require.NoError(t, r.Add("README.md"))
 	require.NoError(t, r.Commit("This is a test"))
 	require.NoError(t, r.Push("origin", "TestBranch"))
+}
+
+func TestRemoteAdd(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
+	require.NoError(t, err)
+	require.NoError(t, r.RemoteAdd("dest", "master", "git@github.com:yesnault/go-repo.git"))
+	out, err := r.RemoteShow("dest")
+	require.NoError(t, err)
+	require.Contains(t, out, "Fetch URL: git@github.com:yesnault/go-repo.git")
 }
 
 func TestHasDiverged(t *testing.T) {
