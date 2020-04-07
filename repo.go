@@ -610,7 +610,7 @@ func (r Repo) RemoteAdd(remote, branch, url string) error {
 	return nil
 }
 
-// RemoteShow run git remote add
+// RemoteShow run git remote show
 func (r Repo) RemoteShow(remote string) (string, error) {
 	args := []string{"remote", "show", remote}
 	out, err := r.runCmd("git", args...)
