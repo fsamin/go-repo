@@ -737,9 +737,10 @@ func InstallPGPKey(privateKey []byte) Option {
 }
 
 // WithVerbose add some logs
-func WithVerbose() Option {
+func WithVerbose(logger func(format string, i ...interface{})) Option {
 	return func(r *Repo) error {
 		r.verbose = true
+		r.logger = logger
 		return nil
 	}
 }
