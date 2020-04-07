@@ -119,3 +119,15 @@ func (b BareRepo) ReadFile(filename string) (io.Reader, error) {
 	}
 	return strings.NewReader(output), nil
 }
+
+func (b BareRepo) FetchURL() (string, error) {
+	return b.repo.FetchURL()
+}
+
+func (b BareRepo) Name() (string, error) {
+	return b.repo.Name()
+}
+
+func (b BareRepo) Path() string {
+	return b.repo.path
+}
