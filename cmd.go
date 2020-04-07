@@ -39,7 +39,7 @@ func (r Repo) runCmd(name string, args ...string) (stdOut string, err error) {
 	stdOut = buffOut.String()
 	stdErr := buffErr.String()
 
-	if !cmd.ProcessState.Success() {
+	if cmd.ProcessState == nil || !cmd.ProcessState.Success() {
 		if len(stdErr) > 0 {
 			return stdOut, fmt.Errorf("%s (%v)", stdErr, runErr)
 		}
