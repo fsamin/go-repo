@@ -399,7 +399,7 @@ func (r Repo) FetchRemoteTag(remote, tag string) error {
 	}
 
 	// Get tag from remote
-	if _, err := r.runCmd("git", "fetch"); err != nil {
+	if _, err := r.runCmd("git", "fetch", remote); err != nil {
 		return fmt.Errorf("unable to git fetch tags: %s", err)
 	}
 
@@ -423,7 +423,7 @@ func (r Repo) LocalBranchExists(branch string) (exists, hasUpstream bool) {
 
 // FetchRemoteBranch runs a git fetch then checkout the remote branch
 func (r Repo) FetchRemoteBranch(remote, branch string) error {
-	if _, err := r.runCmd("git", "fetch"); err != nil {
+	if _, err := r.runCmd("git", "fetch", remote); err != nil {
 		return fmt.Errorf("unable to git fetch: %s", err)
 	}
 
