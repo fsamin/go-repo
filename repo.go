@@ -595,6 +595,16 @@ func (r Repo) Push(remote, branch string, opts ...Option) error {
 	return nil
 }
 
+// Rebase run git remote add
+func (r Repo) Rebase(branch string) error {
+	args := []string{"rebase", branch}
+	out, err := r.runCmd("git", args...)
+	if err != nil {
+		return fmt.Errorf("command 'git rebase' failed: %v (%s)", err, out)
+	}
+	return nil
+}
+
 // RemoteAdd run git remote add
 func (r Repo) RemoteAdd(remote, branch, url string) error {
 	var args []string
