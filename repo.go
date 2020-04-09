@@ -596,7 +596,12 @@ func (r Repo) Push(remote, branch string, opts ...Option) error {
 }
 
 // Rebase run git remote add
-func (r Repo) Rebase(branch string) error {
+func (r Repo) Rebase(branch string, opts ...Option) error {
+	for _, f := range opts {
+		if err := f(&r); err != nil {
+			return err
+		}
+	}
 	args := []string{"rebase", branch}
 	out, err := r.runCmd("git", args...)
 	if err != nil {
