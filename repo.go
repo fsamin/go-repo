@@ -389,7 +389,7 @@ func (r Repo) VerifyTag(tag string) (string, error) {
 	return sha1[:len(sha1)-1], nil
 }
 
-// FetchRemoteTag runs a git fetch then checkout the remote tag
+// FetchRemoteTag deletes given tag if exists, then fetch new tags and checkout given tag.
 func (r Repo) FetchRemoteTag(remote, tag string) error {
 	// delete tag if exist
 	if _, err := r.runCmd("git", "rev-parse", "--verify", tag); err == nil {
@@ -399,12 +399,11 @@ func (r Repo) FetchRemoteTag(remote, tag string) error {
 	}
 
 	// Get tag from remote
-	if _, err := r.runCmd("git", "fetch", remote); err != nil {
+	if _, err := r.runCmd("git", "fetch", "--tags", remote); err != nil {
 		return fmt.Errorf("unable to git fetch tags: %s", err)
 	}
 
-	_, err := r.runCmd("git", "checkout", tag)
-	if err != nil {
+	if _, err := r.runCmd("git", "checkout", tag); err != nil {
 		return fmt.Errorf("unable to git checkout: %s", err)
 	}
 	return nil
