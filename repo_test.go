@@ -73,7 +73,7 @@ func TestCloneFromSSHShouldFailed(t *testing.T) {
 
 	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 
-	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(testRSAKey), WithVerbose())
+	_, err := Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(testRSAKey), WithVerbose(t.Logf))
 	assert.Error(t, err)
 }
 
@@ -87,7 +87,7 @@ func TestCloneFromSSHShouldSuccess(t *testing.T) {
 	if err != nil {
 		t.SkipNow()
 	}
-	_, err = Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose())
+	_, err = Clone(path, "git@github.com:fsamin/go-repo.git", WithSSHAuth(pkey), WithVerbose(t.Logf))
 	require.NoError(t, err)
 }
 
@@ -96,7 +96,7 @@ func TestCloneFromHTTPShouldSuccess(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")), WithVerbose())
+	_, err := Clone(path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")), WithVerbose(t.Logf))
 	require.NoError(t, err)
 }
 

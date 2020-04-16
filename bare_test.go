@@ -19,7 +19,7 @@ func TestBare(t *testing.T) {
 	_, err := CloneBare(path, "https://github.com/fsamin/go-repo.git")
 	require.NoError(t, err)
 
-	repo, err := NewBare(path, WithVerbose())
+	repo, err := NewBare(path, WithVerbose(t.Logf))
 	repo.repo.logger = t.Logf
 	require.NoError(t, err)
 
