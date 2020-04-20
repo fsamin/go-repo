@@ -2,13 +2,14 @@ package repo
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 )
 
-func (r Repo) runCmd(name string, args ...string) (stdOut string, err error) {
-	cmd := exec.Command(name, args...)
+func (r Repo) runCmd(ctx context.Context, name string, args ...string) (stdOut string, err error) {
+	cmd := exec.CommandContext(ctx, name, args...)
 	buffOut := new(bytes.Buffer)
 	buffErr := new(bytes.Buffer)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")

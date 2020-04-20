@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -12,17 +13,17 @@ import (
 )
 
 // CloneBare a git bare repository from the specified url to the destination path. Use Options to force the use of SSH Key and or PGP Key on this repo
-func CloneBare(path, url string, opts ...Option) (Repo, error) {
+func CloneBare(ctx context.Context, path, url string, opts ...Option) (Repo, error) {
 	r := Repo{path: path, url: url}
 	for _, f := range opts {
-		if err := f(&r); err != nil {
+		if err := f(ctx, &r); err != nil {
 			return r, err
 		}
 	}
 	if r.verbose {
 		r.log("Cloning %s\n", r.url)
 	}
-	_, err := r.runCmd("git", "clone", "--bare", r.url, ".")
+	_, err := r.runCmd(ctx, "git", "clone", "--bare", r.url, ".")
 	if err != nil {
 		return r, err
 	}
@@ -30,20 +31,20 @@ func CloneBare(path, url string, opts ...Option) (Repo, error) {
 }
 
 // NewBare instanciance a bare repo instance from the path assuming the repo has already been cloned in.
-func NewBare(path string, opts ...Option) (b BareRepo, err error) {
+func NewBare(ctx context.Context, path string, opts ...Option) (b BareRepo, err error) {
 	b = BareRepo{Repo{path: path}}
 	b.repo.path, err = findRefsDirectory(path)
 	if err != nil {
 		return b, err
 	}
 
-	output, _ := b.repo.runCmd("git", "rev-parse", "--is-bare-repository")
+	output, _ := b.repo.runCmd(ctx, "git", "rev-parse", "--is-bare-repository")
 	if !strings.Contains(output, "true") {
 		return b, errors.New("path is not a bare repository")
 	}
 
 	for _, f := range opts {
-		if err := f(&b.repo); err != nil {
+		if err := f(ctx, &b.repo); err != nil {
 			return b, err
 		}
 	}
@@ -78,8 +79,8 @@ func checkRefsDirectory(path string) bool {
 	return true
 }
 
-func (b BareRepo) ListFiles() ([]string, error) {
-	output, err := b.repo.runCmd("git", "ls-tree", "--full-tree", "--name-only", "-r", "HEAD")
+func (b BareRepo) ListFiles(ctx context.Context) ([]string, error) {
+	output, err := b.repo.runCmd(ctx, "git", "ls-tree", "--full-tree", "--name-only", "-r", "HEAD")
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +91,9 @@ func (b BareRepo) ListFiles() ([]string, error) {
 
 var singleSpacePattern = regexp.MustCompile(`\s+`)
 
-func (b BareRepo) FileSize(filename string) (int64, error) {
+func (b BareRepo) FileSize(ctx context.Context, filename string) (int64, error) {
 
-	output, err := b.repo.runCmd("git", "ls-tree", "--full-tree", "--long", "-r", "HEAD")
+	output, err := b.repo.runCmd(ctx, "git", "ls-tree", "--full-tree", "--long", "-r", "HEAD")
 	if err != nil {
 		return -1, err
 	}
@@ -112,20 +113,20 @@ func (b BareRepo) FileSize(filename string) (int64, error) {
 	return -1, errors.New("unable to file size: file " + filename + " not found")
 }
 
-func (b BareRepo) ReadFile(filename string) (io.Reader, error) {
-	output, err := b.repo.runCmd("git", "show", "HEAD:"+filename)
+func (b BareRepo) ReadFile(ctx context.Context, filename string) (io.Reader, error) {
+	output, err := b.repo.runCmd(ctx, "git", "show", "HEAD:"+filename)
 	if err != nil {
 		return nil, err
 	}
 	return strings.NewReader(output), nil
 }
 
-func (b BareRepo) FetchURL() (string, error) {
-	return b.repo.FetchURL()
+func (b BareRepo) FetchURL(ctx context.Context) (string, error) {
+	return b.repo.FetchURL(ctx)
 }
 
-func (b BareRepo) Name() (string, error) {
-	return b.repo.Name()
+func (b BareRepo) Name(ctx context.Context) (string, error) {
+	return b.repo.Name(ctx)
 }
 
 func (b BareRepo) Path() string {
