@@ -30,20 +30,24 @@ func (r Repo) setupSSHKey() ([]string, error) {
 
 	gitSSHCmd := exec.Command("ssh").Path
 	gitSSHCmd += " -i " + r.sshKey.filename
+	gitSSHCmd += " -o IdentitiesOnly=yes"
 	gitSSHCmd += " -o StrictHostKeyChecking=no"
 
-	var wrapper string
+	keyDir := filepath.Dir(r.sshKey.filename)
+
+	var wrapper, wrapperPath string
 	if runtime.GOOS == "windows" {
-		gitSSHCmd += " %*"
-		wrapper = gitSSHCmd
+		gitSSHCmd += ` %*`
+		wrapper = `@echo off
+` + gitSSHCmd
+		wrapperPath = filepath.Join(keyDir, "gitwrapper.bat")
 	} else {
 		gitSSHCmd += ` "$@"`
 		wrapper = `#!/bin/sh
 ` + gitSSHCmd
+		wrapperPath = filepath.Join(keyDir, "gitwrapper")
 	}
 
-	keyDir := filepath.Dir(r.sshKey.filename)
-	wrapperPath := filepath.Join(keyDir, "gitwrapper")
 	if err := ioutil.WriteFile(wrapperPath, []byte(wrapper), os.FileMode(0700)); err != nil {
 		return nil, err
 	}
