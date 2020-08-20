@@ -453,10 +453,10 @@ func TestRemoteAdd(t *testing.T) {
 
 	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
 	require.NoError(t, err)
-	require.NoError(t, r.RemoteAdd(context.TODO(), "dest", "master", "git@github.com:yesnault/go-repo.git"))
+	require.NoError(t, r.RemoteAdd(context.TODO(), "dest", "master", "https://github.com/yesnault/go-repo.git"))
 	out, err := r.RemoteShow(context.TODO(), "dest")
 	require.NoError(t, err)
-	require.Contains(t, out, "Fetch URL: git@github.com:yesnault/go-repo.git")
+	require.Contains(t, out, "Fetch URL: https://github.com/yesnault/go-repo.git")
 }
 
 func TestHasDiverged(t *testing.T) {

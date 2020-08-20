@@ -1,8 +1,8 @@
 language: go
 go:
-- 1.8.x
-- 1.9.x
-- 1.10.x
+- 1.13.x
+- 1.14.x
+- 1.15.x
 - tip
 - master
 branches:
@@ -13,7 +13,6 @@ before_install:
   -in travis_id_rsa.enc -out travis_id_rsa -d
 - sudo apt-get install --only-upgrade -y git
 script:
-- go get
 - go build
 - go test
 env:
