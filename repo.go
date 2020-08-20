@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,15 @@ func New(ctx context.Context, path string, opts ...Option) (r Repo, err error) {
 	return r, nil
 }
 
+var windowsPathRegex = regexp.MustCompile(`^[a-zA-Z]:\\$`)
+
+func pathIsRoot(p string) bool {
+	if runtime.GOOS == "windows" {
+		return windowsPathRegex.MatchString(p)
+	}
+	return p == string(filepath.Separator)
+}
+
 func checkDotGitDirectory(path string) bool {
 	dotGit := filepath.Join(path, ".git")
 	if _, err := os.Stat(dotGit); err != nil || os.IsNotExist(err) {
@@ -73,7 +83,7 @@ func findDotGitDirectory(p string) (string, error) {
 		return "", err
 	}
 
-	if p == string(filepath.Separator) {
+	if pathIsRoot(p) {
 		return "", errors.New(".git directory not found")
 	}
 
