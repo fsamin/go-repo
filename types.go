@@ -17,13 +17,14 @@ type Repo struct {
 
 // Commit represent a git commit
 type Commit struct {
-	LongHash string
-	Hash     string
-	Author   string
-	Subject  string
-	Body     string
-	Date     time.Time
-	Files    map[string]File
+	LongHash    string
+	Hash        string
+	Author      string
+	AuthorEmail string
+	Subject     string
+	Body        string
+	Date        time.Time
+	Files       map[string]File
 }
 
 type Tag struct {

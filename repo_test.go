@@ -503,6 +503,8 @@ func TestCommitWithUser(t *testing.T) {
 	commit, err := r.LatestCommit(context.TODO())
 	require.NoError(t, err)
 	assert.Equal(t, "foo.bar", commit.Author)
+	assert.Equal(t, "foo@bar.com", commit.AuthorEmail)
+
 }
 
 func TestCommitsBetween(t *testing.T) {

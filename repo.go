@@ -335,7 +335,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%s||%b||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%s||%b||", "--name-status")
 	if err != nil {
 		return c, err
 	}
@@ -343,7 +343,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	c.LongHash = hash
 	c.Hash = hash[:7]
 
-	splittedDetails := strings.SplitN(details, "||", 5)
+	splittedDetails := strings.SplitN(details, "||", 6)
 
 	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
 	if err != nil {
@@ -351,8 +351,9 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	}
 	c.Date = time.Unix(ts, 0)
 	c.Author = splittedDetails[1]
-	c.Subject = splittedDetails[2]
-	c.Body = splittedDetails[3]
+	c.AuthorEmail = splittedDetails[2]
+	c.Subject = splittedDetails[3]
+	c.Body = splittedDetails[4]
 	return c, err
 }
 
@@ -362,7 +363,7 @@ func (r Repo) GetCommitWithDiff(ctx context.Context, hash string) (Commit, error
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%s||%b||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%s||%b||", "--name-status")
 	if err != nil {
 		return c, err
 	}
@@ -370,7 +371,7 @@ func (r Repo) GetCommitWithDiff(ctx context.Context, hash string) (Commit, error
 	c.LongHash = hash[:len(hash)-1]
 	c.Hash = hash[:7]
 
-	splittedDetails := strings.SplitN(details, "||", 5)
+	splittedDetails := strings.SplitN(details, "||", 6)
 
 	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
 	if err != nil {
@@ -378,10 +379,11 @@ func (r Repo) GetCommitWithDiff(ctx context.Context, hash string) (Commit, error
 	}
 	c.Date = time.Unix(ts, 0)
 	c.Author = splittedDetails[1]
-	c.Subject = splittedDetails[2]
-	c.Body = splittedDetails[3]
+	c.AuthorEmail = splittedDetails[2]
+	c.Subject = splittedDetails[3]
+	c.Body = splittedDetails[4]
 
-	fileList := strings.TrimSpace(splittedDetails[4])
+	fileList := strings.TrimSpace(splittedDetails[5])
 	c.Files, err = r.parseDiff(ctx, hash, fileList)
 	return c, err
 }
