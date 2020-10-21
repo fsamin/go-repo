@@ -141,3 +141,7 @@ func (b BareRepo) CommitsBetween(ctx context.Context, from, to time.Time, branch
 func (b BareRepo) DefaultBranch(ctx context.Context) (string, error) {
 	return b.repo.DefaultBranch(ctx)
 }
+
+func (b BareRepo) TestTags(ctx context.Context) ([]Tag, error) {
+	return b.repo.Tags(ctx)
+}

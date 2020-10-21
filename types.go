@@ -26,6 +26,11 @@ type Commit struct {
 	Files    map[string]File
 }
 
+type Tag struct {
+	Message string
+	Commit
+}
+
 type File struct {
 	Filename   string
 	Status     string

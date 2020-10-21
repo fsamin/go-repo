@@ -789,3 +789,38 @@ func (r Repo) log(format string, i ...interface{}) {
 		r.logger(format, i...)
 	}
 }
+
+func (r Repo) Tags(ctx context.Context) ([]Tag, error) {
+	s, err := r.runCmd(ctx, "git", "show-ref", "--tags")
+	if err != nil {
+		return nil, err
+	}
+
+	var commitsString []string
+	var tagString []string
+	scanner := bufio.NewScanner(strings.NewReader(s))
+	for scanner.Scan() {
+		s := scanner.Text()
+		h := strings.Split(s, " ")[0]
+		h = strings.TrimSpace(h)
+		t := strings.Split(s, " ")[1]
+		t = strings.TrimSpace(t)
+		commitsString = append(commitsString, h)
+		tagString = append(tagString, t)
+	}
+	err = scanner.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	var tags []Tag
+	for i, c := range commitsString {
+		t, err := r.GetCommit(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, Tag{Commit: t, Message: tagString[i]})
+	}
+
+	return tags, nil
+}

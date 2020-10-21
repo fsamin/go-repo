@@ -518,3 +518,17 @@ func TestCommitsBetween(t *testing.T) {
 	require.Len(t, commits, 42)
 	require.NoError(t, err)
 }
+
+func TestTags(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+	tags, err := r.Tags(context.TODO())
+	require.NotEmpty(t, tags)
+	t.Log(tags)
+	require.NoError(t, err)
+}
