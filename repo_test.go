@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -502,4 +503,18 @@ func TestCommitWithUser(t *testing.T) {
 	commit, err := r.LatestCommit(context.TODO())
 	require.NoError(t, err)
 	assert.Equal(t, "foo.bar", commit.Author)
+}
+
+func TestCommitsBetween(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+	until, _ := time.Parse("01/02/06", "01/01/19")
+	commits, err := r.CommitsBetween(context.TODO(), time.Time{}, until, "master")
+	require.Len(t, commits, 42)
+	require.NoError(t, err)
 }

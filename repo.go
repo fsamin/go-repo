@@ -232,6 +232,35 @@ func (r Repo) Commits(ctx context.Context, from, to string) ([]Commit, error) {
 	return commits, err
 }
 
+func (r Repo) CommitsBetween(ctx context.Context, from, to time.Time, branch string) ([]Commit, error) {
+	s, err := r.runCmd(ctx, "git", "log", branch, "--since", from.Format("2006-01-02"), "--until", to.Format("2006-01-02"), "--pretty=%H")
+	if err != nil {
+		return nil, err
+	}
+
+	var commitsString []string
+	scanner := bufio.NewScanner(strings.NewReader(s))
+	for scanner.Scan() {
+		s := scanner.Text()
+		commitsString = append(commitsString, s)
+	}
+	err = scanner.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	var commits []Commit
+	for _, c := range commitsString {
+		comm, err := r.GetCommit(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, comm)
+	}
+
+	return commits, nil
+}
+
 func (r Repo) parseDiff(ctx context.Context, hash, diff string) (map[string]File, error) {
 	Files := make(map[string]File)
 

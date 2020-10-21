@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // CloneBare a git bare repository from the specified url to the destination path. Use Options to force the use of SSH Key and or PGP Key on this repo
@@ -131,4 +132,8 @@ func (b BareRepo) Name(ctx context.Context) (string, error) {
 
 func (b BareRepo) Path() string {
 	return b.repo.path
+}
+
+func (b BareRepo) CommitsBetween(ctx context.Context, from, to time.Time, branch string) ([]Commit, error) {
+	return b.repo.CommitsBetween(ctx, from, to, branch)
 }
