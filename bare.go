@@ -137,3 +137,7 @@ func (b BareRepo) Path() string {
 func (b BareRepo) CommitsBetween(ctx context.Context, from, to time.Time, branch string) ([]Commit, error) {
 	return b.repo.CommitsBetween(ctx, from, to, branch)
 }
+
+func (b BareRepo) DefaultBranch(ctx context.Context) (string, error) {
+	return b.repo.DefaultBranch(ctx)
+}
