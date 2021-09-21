@@ -464,10 +464,6 @@ func (r Repo) LocalBranchExists(ctx context.Context, branch string) (exists, has
 
 // FetchRemoteBranch runs a git fetch then checkout the remote branch
 func (r Repo) FetchRemoteBranch(ctx context.Context, remote, branch string) error {
-	if _, err := r.runCmd(ctx, "git", "fetch", remote); err != nil {
-		return fmt.Errorf("unable to git fetch: %s", err)
-	}
-
 	branchExist, hasUpstream := r.LocalBranchExists(ctx, branch)
 	if branchExist {
 		if hasUpstream {
@@ -481,6 +477,10 @@ func (r Repo) FetchRemoteBranch(ctx context.Context, remote, branch string) erro
 		if _, err := r.runCmd(ctx, "git", "branch", "-d", branch); err != nil {
 			return fmt.Errorf("unable to git delete: %s", err)
 		}
+	}
+
+	if _, err := r.runCmd(ctx, "git", "fetch", remote); err != nil {
+		return fmt.Errorf("unable to git fetch: %s", err)
 	}
 
 	_, err := r.runCmd(ctx, "git", "checkout", "-b", branch, "--track", remote+"/"+branch)
