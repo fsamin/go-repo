@@ -335,7 +335,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%s||%b||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%s||%b||%GK||", "--name-status")
 	if err != nil {
 		return c, err
 	}
@@ -354,6 +354,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	c.AuthorEmail = splittedDetails[2]
 	c.Subject = splittedDetails[3]
 	c.Body = splittedDetails[4]
+	c.SignKey = splittedDetails[5]
 	return c, err
 }
 
