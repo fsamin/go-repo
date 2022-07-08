@@ -25,6 +25,7 @@ type Commit struct {
 	Body        string
 	Date        time.Time
 	Files       map[string]File
+	GPGKeyID    string
 }
 
 type Tag struct {
