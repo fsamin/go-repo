@@ -354,7 +354,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	c.AuthorEmail = splittedDetails[2]
 	c.Subject = splittedDetails[3]
 	c.Body = splittedDetails[4]
-	c.SignKey = splittedDetails[5]
+	c.GPGKeyID = splittedDetails[5]
 	return c, err
 }
 
