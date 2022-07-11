@@ -423,6 +423,14 @@ func (r Repo) CurrentBranch(ctx context.Context) (string, error) {
 	return b[:len(b)-1], nil
 }
 
+func (r Repo) VerifyCommit(ctx context.Context, commit string) error {
+	_, err := r.runCmd(ctx, "git", "verify-commit", commit)
+	if err != nil {
+		return fmt.Errorf("commit not verify: %v", err)
+	}
+	return nil
+}
+
 // VerifyTag returns the sha1 of the tag if exists, if it doesn't exist, it returns an error
 func (r Repo) VerifyTag(ctx context.Context, tag string) (string, error) {
 	sha1, err := r.runCmd(ctx, "git", "rev-parse", "--verify", tag)
@@ -728,6 +736,16 @@ func WithUser(email, name string) Option {
 			return fmt.Errorf("command 'git config user.name' failed: %v (%s)", err, out)
 		}
 		return err
+	}
+}
+
+func WithSignKey(keyId string) Option {
+	return func(ctx context.Context, r *Repo) error {
+		out, err := r.runCmd(ctx, "git", "config", "user.signingkey", keyId)
+		if err != nil {
+			return fmt.Errorf("command 'git config user.signingkey' failed: %v (%s)", err, out)
+		}
+		return nil
 	}
 }
 

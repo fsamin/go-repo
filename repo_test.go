@@ -1,9 +1,11 @@
 package repo
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -305,6 +307,68 @@ func TestLatestCommit(t *testing.T) {
 
 	c, err := r.LatestCommit(context.TODO())
 	t.Logf("%+v", c)
+	require.NoError(t, err)
+}
+
+func TestVerifyCommit(t *testing.T) {
+	// Create GPG key
+	cmd := exec.CommandContext(context.TODO(), "gpg", "--batch", "--passphrase", "", "--quick-gen-key", "go-repo-test@local.net", "default", "default")
+	buffOut := new(bytes.Buffer)
+	buffErr := new(bytes.Buffer)
+	cmd.Dir = os.TempDir()
+	cmd.Env = append(cmd.Env, "LANG=en_US.UTF-8")
+	cmd.Stderr = buffErr
+	cmd.Stdout = buffOut
+	runErr := cmd.Run()
+
+	stdErr := buffErr.String()
+
+	if runErr != nil || cmd.ProcessState == nil || !cmd.ProcessState.Success() {
+		t.Logf("%s", stdErr)
+		t.Logf("%v", runErr)
+		t.Fail()
+	}
+	lineSplit := strings.Split(stdErr, "\n")
+	var keyId string
+	var keyFingerprint string
+	if len(lineSplit) > 1 {
+		keyLineSplitted := strings.Split(lineSplit[0], " ")
+		if len(keyLineSplitted) > 2 {
+			keyId = keyLineSplitted[2]
+		}
+
+		fingerPrintLineSplitted := strings.Split(lineSplit[1], "/")
+		keyFingerprint = strings.TrimSuffix(fingerPrintLineSplitted[len(fingerPrintLineSplitted)-1], ".rev'")
+	}
+	require.NotEmpty(t, keyId)
+	t.Cleanup(func() {
+		cmdSecretKey := exec.Command("gpg", "--batch", "--yes", "--delete-secret-key", keyFingerprint)
+		err := cmdSecretKey.Run()
+		t.Logf("%s", cmdSecretKey)
+		t.Logf(">>%v", err)
+		cmdPubKey := exec.Command("gpg", "--batch", "--yes", "--delete-key", keyFingerprint)
+		err = cmdPubKey.Run()
+		t.Logf("%s", cmdPubKey)
+		t.Logf(">>%v", err)
+	})
+
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	// Init repo
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+
+	require.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add(context.TODO(), "README.md"))
+	require.NoError(t, r.Commit(context.TODO(), "This is a test", WithSignKey(keyId)))
+
+	commit, err := r.LatestCommit(context.TODO())
+	require.NoError(t, err)
+
+	require.NoError(t, r.VerifyCommit(context.TODO(), commit.Hash))
 	require.NoError(t, err)
 }
 
