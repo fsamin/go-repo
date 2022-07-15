@@ -343,7 +343,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	c.LongHash = hash
 	c.Hash = hash[:7]
 
-	splittedDetails := strings.SplitN(details, "||", 6)
+	splittedDetails := strings.SplitN(details, "||", 7)
 
 	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
 	if err != nil {
