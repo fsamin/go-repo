@@ -112,6 +112,26 @@ func TestCurrentBranch(t *testing.T) {
 	assert.NotEmpty(t, b)
 }
 
+func TestFetchRemoteTags(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")))
+	require.NoError(t, err)
+
+	err = r.FetchRemoteTags(context.TODO(), "origin")
+	require.NoError(t, err)
+
+	sha1, err := r.VerifyTag(context.TODO(), "v0.1.0")
+	require.NoError(t, err)
+	assert.Equal(t, "7abae771a5d8690b24993971238bbf3b93b6961b", sha1)
+
+	sha1, err = r.VerifyTag(context.TODO(), "v0.1.1")
+	require.NoError(t, err)
+	assert.Equal(t, "29d80ac945280d30bb3f2442b1d0e894d8dcb4a1", sha1)
+}
+
 func TestFetchRemoteTag(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)

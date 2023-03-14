@@ -440,6 +440,16 @@ func (r Repo) VerifyTag(ctx context.Context, tag string) (string, error) {
 	return sha1[:len(sha1)-1], nil
 }
 
+// FetchRemoteTags fetch all tags
+func (r Repo) FetchRemoteTags(ctx context.Context, remote string) error {
+	// Get tags from remote
+	if _, err := r.runCmd(ctx, "git", "fetch", "--tags", remote); err != nil {
+		return fmt.Errorf("unable to git fetch tags: %s", err)
+	}
+
+	return nil
+}
+
 // FetchRemoteTag deletes given tag if exists, then fetch new tags and checkout given tag.
 func (r Repo) FetchRemoteTag(ctx context.Context, remote, tag string) error {
 	// delete tag if exist
@@ -620,6 +630,27 @@ func (r Repo) Commit(ctx context.Context, m string, opts ...Option) error {
 	out, err := r.runCmd(ctx, "git", "commit", "-m", strconv.Quote(m))
 	if err != nil {
 		return fmt.Errorf("command 'git commit' failed: %v (%s)", err, out)
+	}
+	return nil
+}
+
+// PushTags (always with force) the branch
+func (r Repo) PushTags(ctx context.Context, opts ...Option) error {
+	for _, f := range opts {
+		if err := f(ctx, &r); err != nil {
+			return err
+		}
+	}
+	out, err := r.runCmd(ctx, "git", "push", "--tags")
+	if err != nil {
+		errS := fmt.Sprintf("%v", err)
+		URLS := urlRegExp.FindString(errS)
+		URL, errURL := url.Parse(URLS)
+		if errURL == nil {
+			URL.User = nil
+			errS = strings.Replace(errS, URLS, URL.String(), -1)
+		}
+		return fmt.Errorf("%s (%s)", errS, out)
 	}
 	return nil
 }
