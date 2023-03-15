@@ -635,13 +635,13 @@ func (r Repo) Commit(ctx context.Context, m string, opts ...Option) error {
 }
 
 // PushTags (always with force) the branch
-func (r Repo) PushTags(ctx context.Context, opts ...Option) error {
+func (r Repo) PushTags(ctx context.Context, remote string, opts ...Option) error {
 	for _, f := range opts {
 		if err := f(ctx, &r); err != nil {
 			return err
 		}
 	}
-	out, err := r.runCmd(ctx, "git", "push", "--tags")
+	out, err := r.runCmd(ctx, "git", "push", remote, "--tags")
 	if err != nil {
 		errS := fmt.Sprintf("%v", err)
 		URLS := urlRegExp.FindString(errS)
