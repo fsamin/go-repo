@@ -618,3 +618,14 @@ func TestTags(t *testing.T) {
 	t.Log(tags)
 	require.NoError(t, err)
 }
+
+func TestSubmodule(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+	require.NoError(t, r.SubmoduleUpdate(context.TODO(), SubmoduleOpt{Init: true, Recursive: true}))
+}

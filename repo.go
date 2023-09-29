@@ -876,3 +876,26 @@ func (r Repo) Tags(ctx context.Context) ([]Tag, error) {
 
 	return tags, nil
 }
+
+type SubmoduleOpt struct {
+	Init      bool
+	Recursive bool
+}
+
+func (r Repo) SubmoduleUpdate(ctx context.Context, opt SubmoduleOpt) error {
+	if r.verbose {
+		r.log("Submodule update %v\n", r.url)
+	}
+	args := []string{"submodule", "update"}
+	if opt.Init {
+		args = append(args, "--init")
+	}
+	if opt.Recursive {
+		args = append(args, "--recursive")
+	}
+	_, err := r.runCmd(ctx, "git", args...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
