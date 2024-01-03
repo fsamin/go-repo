@@ -629,3 +629,18 @@ func TestSubmodule(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.SubmoduleUpdate(context.TODO(), SubmoduleOpt{Init: true, Recursive: true}))
 }
+
+func TestDescribe(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/ovh/cds.git")
+	require.NoError(t, err)
+
+	d, err := r.Describe(context.TODO(), nil)
+	require.NoError(t, err)
+
+	t.Logf("git describe: %+v", d)
+}

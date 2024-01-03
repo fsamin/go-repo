@@ -3,9 +3,10 @@ package repo
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
+
+	"github.com/pkg/errors"
 )
 
 func (r Repo) runCmd(ctx context.Context, name string, args ...string) (stdOut string, err error) {
@@ -42,13 +43,13 @@ func (r Repo) runCmd(ctx context.Context, name string, args ...string) (stdOut s
 
 	if cmd.ProcessState == nil || !cmd.ProcessState.Success() {
 		if len(stdErr) > 0 {
-			return stdOut, fmt.Errorf("%s (%v)", stdErr, runErr)
+			return stdOut, errors.Errorf("%s (%v)", stdErr, runErr)
 		}
-		return stdOut, fmt.Errorf("exited with error: %v", runErr)
+		return stdOut, errors.Errorf("exited with error: %v", runErr)
 	}
 
 	if runErr != nil {
-		return stdOut, fmt.Errorf("%s (%v)", stdErr, runErr)
+		return stdOut, errors.Errorf("%s (%v)", stdErr, runErr)
 	}
 
 	btes := []byte(stdOut)

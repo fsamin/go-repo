@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,7 +18,9 @@ import (
 	"strings"
 	"time"
 
+	semver "github.com/Masterminds/semver/v3"
 	zglob "github.com/mattn/go-zglob"
+	"github.com/pkg/errors"
 )
 
 var urlRegExp = regexp.MustCompile(`https:\/\/[-a-zA-Z0-9@:%._\+#?&//=]*`)
@@ -898,4 +899,117 @@ func (r Repo) SubmoduleUpdate(ctx context.Context, opt SubmoduleOpt) error {
 		return err
 	}
 	return nil
+}
+
+type DescribeOpt struct {
+	DirtySemver      bool
+	LongSemver       bool
+	Long             bool
+	RequireAnnotated bool
+	Match            string
+	DirtyMark        string
+}
+
+type Description struct {
+	Dirty        bool            `json:"dirty"`
+	Raw          string          `json:"raw"`
+	Hash         string          `json:"hash"`
+	Distance     int             `json:"distance"`
+	Tag          string          `json:"tag"`
+	Semver       *semver.Version `json:"semver"`
+	Suffix       string          `json:"suffix"`
+	SemverString string          `json:"semver_string"`
+}
+
+func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, error) {
+	if opt == nil {
+		opt = &DescribeOpt{
+			DirtySemver: true,
+			Long:        true,
+			Match:       "v[0-9]*",
+			DirtyMark:   "-dirty",
+		}
+	}
+	args := []string{"describe", "--long", "--dirty=" + opt.DirtyMark, "--always"}
+	if !opt.RequireAnnotated {
+		args = append(args, "--tags")
+	}
+	if opt.Match != "" {
+		args = append(args, "--match", opt.Match)
+	}
+
+	// git fetch --prune --unshallow
+	_, _ = r.runCmd(ctx, "git", "fetch", "--prune", "--unshallow") // skip all errors
+
+	// git fetch --tags
+	if _, err := r.runCmd(ctx, "git", "fetch", "--tags"); err != nil {
+		return nil, err
+	}
+
+	// git describe
+	description, err := r.runCmd(ctx, "git", args...)
+	if err != nil {
+		return nil, err
+	}
+
+	description = strings.TrimSuffix(description, "\n")
+
+	// description
+	var output = &Description{
+		Raw: description,
+	}
+
+	if strings.HasSuffix(description, opt.DirtyMark) {
+		output.Dirty = true
+		description = strings.TrimSuffix(description, opt.DirtyMark)
+	}
+
+	var tokens = strings.Split(description, "-")
+	var suffixTokens []string
+
+	tokens, output.Hash = slicePop(tokens)
+	suffixTokens = append([]string{output.Hash}, suffixTokens...)
+	if len(tokens) > 0 {
+		var distanceS string
+		tokens, distanceS = slicePop(tokens)
+		output.Distance, _ = strconv.Atoi(distanceS)
+		output.Tag = strings.Join(tokens, "-")
+		output.Semver, _ = semver.NewVersion(output.Tag)
+		output.SemverString = ""
+		var build string
+		var appendDirty = opt.DirtySemver && output.Dirty
+		if output.Distance > 0 || opt.LongSemver || appendDirty {
+			build = distanceS + "." + output.Hash
+			if appendDirty {
+				rg := regexp.MustCompile("[^a-z0-9.]")
+				build += "." + rg.ReplaceAllString(opt.DirtyMark, "")
+			}
+		}
+		if output.Semver != nil {
+			output.SemverString = output.Semver.String()
+			if build != "" {
+				output.SemverString += "+" + build
+			}
+		}
+	}
+
+	if !opt.Long && output.Tag != "" && output.Distance == 0 {
+		output.Suffix = ""
+		output.Raw = output.Tag
+	} else {
+		output.Suffix = strings.Join(suffixTokens, "-")
+	}
+
+	if output.Dirty {
+		output.Suffix += opt.DirtyMark
+	}
+
+	return output, nil
+}
+
+func slicePop[T any](s []T) ([]T, T) {
+	i := len(s) - 1
+	elem := s[i]
+	s = append(s[:i], s[i+1:]...)
+	return s, elem
 }
