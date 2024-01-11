@@ -333,12 +333,13 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	t := Tag{}
-	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%at||%an||%ae||%s||%b||%H||%GK||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=||%at||%an||%ae||%s||%b||%H||%GK||", "--name-status")
 	if err != nil {
 		return t, err
 	}
 
-	splittedDetails := strings.SplitN(details, "||", 8)
+	splittedDetails := strings.SplitN(details, "||", 9)
+	splittedDetails = splittedDetails[1:]
 
 	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
 	if err != nil {
