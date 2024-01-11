@@ -333,7 +333,7 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	t := Tag{}
-	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%at||%an||%ae||%s||%b||%H||%GK||")
+	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%at||%an||%ae||%s||%b||%H||%GK||", "--name-status")
 	if err != nil {
 		return t, err
 	}
