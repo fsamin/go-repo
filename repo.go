@@ -161,7 +161,9 @@ func (r Repo) LocalConfigSet(ctx context.Context, section, key, value string) er
 func trimURL(fetchURL string) (string, error) {
 	repoName := fetchURL
 
-	repoName = strings.TrimPrefix(repoName, ".git")
+	if strings.HasSuffix(repoName, ".git") {
+		repoName = repoName[:len(repoName)-4]
+	}
 
 	if strings.HasPrefix(repoName, "https://") {
 		repoName = repoName[8:]
