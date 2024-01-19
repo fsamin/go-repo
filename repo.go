@@ -6,7 +6,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/user"
@@ -328,6 +327,35 @@ func (r Repo) parseDiff(ctx context.Context, hash, diff string) (map[string]File
 	}
 
 	return Files, nil
+}
+
+// GetTag returns a tag
+func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
+	tagName = strings.TrimFunc(tagName, func(r rune) bool {
+		return r == '\n' || r == ' ' || r == '\t'
+	})
+	t := Tag{}
+	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=||%at||%an||%ae||%s||%b||%H||%GK||", "--name-status")
+	if err != nil {
+		return t, err
+	}
+
+	splittedDetails := strings.SplitN(details, "||", 9)
+	splittedDetails = splittedDetails[1:]
+
+	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
+	if err != nil {
+		return t, err
+	}
+	t.Date = time.Unix(ts, 0)
+	t.Author = splittedDetails[1]
+	t.AuthorEmail = splittedDetails[2]
+	t.Subject = splittedDetails[3]
+	t.Body = splittedDetails[4]
+	t.LongHash = splittedDetails[5]
+	t.Hash = t.LongHash[:7]
+	t.GPGKeyID = splittedDetails[6]
+	return t, err
 }
 
 // GetCommit returns a commit
@@ -750,7 +778,7 @@ func (r Repo) DeleteHook(name string) error {
 
 func (r Repo) WriteHook(name string, content []byte) error {
 	hookPath := filepath.Join(r.path, ".git", "hooks", name)
-	return ioutil.WriteFile(hookPath, content, os.FileMode(0755))
+	return os.WriteFile(hookPath, content, os.FileMode(0755))
 }
 
 // Option is a function option
@@ -783,7 +811,7 @@ func WithSignKey(keyId string) Option {
 
 // WithSSHAuth configure the git command to use a specific private key
 func WithSSHAuth(privateKey []byte) Option {
-	return func(ctx context.Context, r *Repo) error {
+	return func(_ context.Context, r *Repo) error {
 		r.sshKey = &sshKey{
 			content: privateKey,
 		}
@@ -804,13 +832,13 @@ func WithSSHAuth(privateKey []byte) Option {
 			return err
 		}
 		r.sshKey.filename = filepath.Join(dir, "id_rsa")
-		return ioutil.WriteFile(r.sshKey.filename, r.sshKey.content, os.FileMode(0600))
+		return os.WriteFile(r.sshKey.filename, r.sshKey.content, os.FileMode(0600))
 	}
 }
 
 // WithHTTPAuth override the repo configuration to use http auth
 func WithHTTPAuth(username string, password string) Option {
-	return func(ctx context.Context, r *Repo) error {
+	return func(_ context.Context, r *Repo) error {
 		u, err := url.Parse(r.url)
 		if err != nil {
 			return err
@@ -830,7 +858,7 @@ func InstallPGPKey(privateKey []byte) Option {
 
 // WithVerbose add some logs
 func WithVerbose(logger func(format string, i ...interface{})) Option {
-	return func(ctx context.Context, r *Repo) error {
+	return func(_ context.Context, r *Repo) error {
 		r.verbose = true
 		r.logger = logger
 		return nil

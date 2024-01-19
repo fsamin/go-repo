@@ -506,6 +506,21 @@ func TestCheckCommit(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGetTag(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
+	require.NoError(t, err)
+
+	tag, err := r.GetTag(context.TODO(), "v0.3.0")
+	require.NoError(t, err)
+
+	require.Equal(t, "4AEE18F83AFDEB23", tag.GPGKeyID)
+}
+
 func TestPush(t *testing.T) {
 	if os.Getenv("TRAVIS_BUILD_DIR") != "" {
 		t.SkipNow()
