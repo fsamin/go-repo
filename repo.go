@@ -472,7 +472,7 @@ func (r Repo) VerifyTag(ctx context.Context, tag string) (string, error) {
 // FetchRemoteTags fetch all tags
 func (r Repo) FetchRemoteTags(ctx context.Context, remote string) error {
 	// Get tags from remote
-	if _, err := r.runCmd(ctx, "git", "fetch", "--tags", remote); err != nil {
+	if _, err := r.runCmd(ctx, "git", "fetch", "--tags", "--force", remote); err != nil {
 		return fmt.Errorf("unable to git fetch tags: %s", err)
 	}
 
@@ -489,7 +489,7 @@ func (r Repo) FetchRemoteTag(ctx context.Context, remote, tag string) error {
 	}
 
 	// Get tag from remote
-	if _, err := r.runCmd(ctx, "git", "fetch", "--tags", remote); err != nil {
+	if _, err := r.runCmd(ctx, "git", "fetch", "--tags", "--force", remote); err != nil {
 		return fmt.Errorf("unable to git fetch tags: %s", err)
 	}
 
