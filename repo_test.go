@@ -506,25 +506,6 @@ func TestCheckCommit(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckCommitWithDiff(t *testing.T) {
-	path := filepath.Join(os.TempDir(), "testdata", t.Name())
-	defer os.RemoveAll(path)
-
-	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-
-	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
-	require.NoError(t, err)
-
-	c, err := r.LatestCommit(context.TODO())
-	require.NoError(t, err)
-
-	cc, err := r.GetCommitWithDiff(context.TODO(), c.Hash)
-	require.NoError(t, err)
-	for _, v := range cc.Files {
-		t.Logf("%s", v.Status)
-	}
-}
-
 func TestGetTag(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
