@@ -660,7 +660,7 @@ func TestDescribe(t *testing.T) {
 	t.Logf("git describe: %+v", d)
 }
 
-func TestDiffFromCommit(t *testing.T) {
+func TestDiffSinceCommit(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
 
@@ -682,7 +682,7 @@ func TestDiffFromCommit(t *testing.T) {
 	require.NoError(t, r.Add(context.TODO(), "file2.md"))
 	require.NoError(t, r.Commit(context.TODO(), "This is also a test", WithUser("foo@bar.com", "foo.bar")))
 
-	results, err := r.DiffFromCommit(context.TODO(), currentCommit.LongHash)
+	results, err := r.DiffSinceCommit(context.TODO(), currentCommit.LongHash)
 	require.NoError(t, err)
 
 	require.Len(t, results, 2)

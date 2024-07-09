@@ -418,7 +418,7 @@ func (r Repo) GetCommitWithDiff(ctx context.Context, hash string) (Commit, error
 	return c, err
 }
 
-func (r Repo) DiffFromCommit(ctx context.Context, hash string) (map[string]File, error) {
+func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File, error) {
 	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status")
 	if err != nil {
 		return nil, err
