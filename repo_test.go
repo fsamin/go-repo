@@ -660,7 +660,7 @@ func TestDescribe(t *testing.T) {
 	t.Logf("git describe: %+v", d)
 }
 
-func TestCommitDiff(t *testing.T) {
+func TestDiffFromCommit(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
 
