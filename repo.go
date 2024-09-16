@@ -387,35 +387,27 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	return c, err
 }
 
-// GetCommitWithDiff return the commit data with the parsed diff
-func (r Repo) GetCommitWithDiff(ctx context.Context, hash string) (Commit, error) {
-	hash = strings.TrimFunc(hash, func(r rune) bool {
-		return r == '\n' || r == ' ' || r == '\t'
-	})
-	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%s||%b||", "--name-status")
+func (r Repo) DiffSinceCommitMergeBase(ctx context.Context, hash string) (map[string]File, error) {
+	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--merge-base")
 	if err != nil {
-		return c, err
+		return nil, err
 	}
 
-	c.LongHash = hash[:len(hash)-1]
-	c.Hash = hash[:7]
+	result := make(map[string]File)
 
-	splittedDetails := strings.SplitN(details, "||", 6)
-
-	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
-	if err != nil {
-		return c, err
+	splittedFiles := strings.Split(details, "\n")
+	for _, fLine := range splittedFiles {
+		if len(strings.Trim(fLine, " ")) == 0 {
+			continue
+		}
+		fileData := strings.Split(fLine, "\t")
+		f := File{
+			Status:   fileData[0],
+			Filename: fileData[1],
+		}
+		result[f.Filename] = f
 	}
-	c.Date = time.Unix(ts, 0)
-	c.Author = splittedDetails[1]
-	c.AuthorEmail = splittedDetails[2]
-	c.Subject = splittedDetails[3]
-	c.Body = splittedDetails[4]
-
-	fileList := strings.TrimSpace(splittedDetails[5])
-	c.Files, err = r.parseDiff(ctx, hash, fileList)
-	return c, err
+	return result, nil
 }
 
 func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File, error) {
