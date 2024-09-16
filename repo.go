@@ -384,6 +384,9 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	c.Subject = splittedDetails[3]
 	c.Body = splittedDetails[4]
 	c.GPGKeyID = splittedDetails[5]
+
+	fileList := strings.TrimSpace(splittedDetails[6])
+	c.Files, err = r.parseDiff(ctx, hash, fileList)
 	return c, err
 }
 
