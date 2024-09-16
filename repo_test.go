@@ -682,6 +682,32 @@ func TestDescribe(t *testing.T) {
 	t.Logf("git describe: %+v", d)
 }
 
+func TestGetCommitWithChangetset(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/ovh/cds.git")
+	require.NoError(t, err)
+
+	// Create file 1
+	require.NoError(t, r.Write("file1.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add(context.TODO(), "file1.md"))
+	require.NoError(t, r.Commit(context.TODO(), "This is a test", WithUser("foo@bar.com", "foo.bar")))
+
+	currentCommit, err := r.LatestCommit(context.TODO())
+	require.NoError(t, err)
+
+	c, err := r.GetCommit(context.TODO(), currentCommit.LongHash)
+	require.NoError(t, err)
+
+	require.Len(t, c.Files, 1)
+	_, has := c.Files["file1.md"]
+	require.True(t, has)
+
+}
+
 func TestDiffSinceCommit(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
