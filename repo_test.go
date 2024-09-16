@@ -5,6 +5,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -319,6 +320,27 @@ func TestLocalConfigGet(t *testing.T) {
 	val, err := r.LocalConfigGet(context.TODO(), "foo", "bar")
 	require.NoError(t, err)
 	assert.Equal(t, "value", val)
+}
+
+func TestCommitWithDiff(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	//defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git")
+	require.NoError(t, err)
+
+	require.NoError(t, r.ResetHard(context.TODO(), "606da3d62fe92db940c8c53d533003b819baa702"))
+
+	MyCommit, err := r.GetCommit(context.TODO(), "606da3d62fe92db940c8c53d533003b819baa702")
+	require.NoError(t, err)
+
+	files, err := r.DiffSinceCommitMergeBase(context.TODO(), "56faaabb35acf2fd80856b6397057ebfc848f312")
+	require.NoError(t, err)
+	MyCommit.Files = files
+
+	t.Logf("%+v", MyCommit)
 }
 
 func TestLatestCommit(t *testing.T) {
@@ -691,4 +713,12 @@ func TestDiffSinceCommit(t *testing.T) {
 	_, has = results["file2.md"]
 	require.True(t, has)
 
+	results, err = r.DiffSinceCommitMergeBase(context.TODO(), currentCommit.LongHash)
+	require.NoError(t, err)
+
+	require.Len(t, results, 2)
+	_, has = results["file1.md"]
+	require.True(t, has)
+	_, has = results["file2.md"]
+	require.True(t, has)
 }
