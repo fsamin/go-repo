@@ -285,8 +285,10 @@ func (r Repo) parseDiff(ctx context.Context, hash, diff string) (map[string]File
 			Diff:     diff,
 		}
 
-		//Scan the diff output
+		// Scan the diff output
 		diffScanner := bufio.NewScanner(strings.NewReader(diff))
+		// Raise the MaxTokenSize value to 1024k (default is 64) to handle diff on serialized files (example: svg)
+		diffScanner.Buffer(nil, 1024*1024)
 		var currentHunk *Hunk
 		for diffScanner.Scan() {
 			line := diffScanner.Text()
@@ -317,7 +319,7 @@ func (r Repo) parseDiff(ctx context.Context, hash, diff string) (map[string]File
 
 		err = diffScanner.Err()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to compute diff on file %s for commit %s: %v", filename, hash, err)
 		}
 		Files[filename] = f
 	}
