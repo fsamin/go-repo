@@ -288,6 +288,7 @@ func (r Repo) parseDiff(ctx context.Context, hash, diff string, opt CommitOption
 		//Scan the diff output
 		if !opt.DisableDiffDetail {
 			diffScanner := bufio.NewScanner(strings.NewReader(diff))
+			// Raise the MaxTokenSize value to 1024k (default is 64) to handle diff on serialized files (example: svg)
 			diffScanner.Buffer(nil, 1024*1024)
 			var currentHunk *Hunk
 			for diffScanner.Scan() {
