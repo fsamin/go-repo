@@ -333,7 +333,7 @@ func TestCommitWithDiff(t *testing.T) {
 
 	require.NoError(t, r.ResetHard(context.TODO(), "606da3d62fe92db940c8c53d533003b819baa702"))
 
-	MyCommit, err := r.GetCommit(context.TODO(), "606da3d62fe92db940c8c53d533003b819baa702")
+	MyCommit, err := r.GetCommit(context.TODO(), "606da3d62fe92db940c8c53d533003b819baa702", CommitOption{})
 	require.NoError(t, err)
 
 	files, err := r.DiffSinceCommitMergeBase(context.TODO(), "56faaabb35acf2fd80856b6397057ebfc848f312")
@@ -347,7 +347,7 @@ func TestLatestCommit(t *testing.T) {
 	r, err := New(context.TODO(), ".")
 	require.NoError(t, err)
 
-	c, err := r.LatestCommit(context.TODO())
+	c, err := r.LatestCommit(context.TODO(), CommitOption{})
 	t.Logf("%+v", c)
 	require.NoError(t, err)
 }
@@ -407,7 +407,7 @@ func TestVerifyCommit(t *testing.T) {
 	require.NoError(t, r.Add(context.TODO(), "README.md"))
 	require.NoError(t, r.Commit(context.TODO(), "This is a test", WithSignKey(keyId)))
 
-	commit, err := r.LatestCommit(context.TODO())
+	commit, err := r.LatestCommit(context.TODO(), CommitOption{})
 	require.NoError(t, err)
 
 	require.NoError(t, r.VerifyCommit(context.TODO(), commit.Hash))
@@ -521,10 +521,10 @@ func TestCheckCommit(t *testing.T) {
 	require.NoError(t, r.Write("README2.md", strings.NewReader("this is a test")))
 	require.NoError(t, r.Add(context.TODO(), "README2.md"))
 	require.NoError(t, r.Commit(context.TODO(), "This is a test"))
-	c, err := r.LatestCommit(context.TODO())
+	c, err := r.LatestCommit(context.TODO(), CommitOption{})
 	require.NoError(t, err)
 
-	_, err = r.GetCommit(context.TODO(), c.Hash)
+	_, err = r.GetCommit(context.TODO(), c.Hash, CommitOption{})
 	require.NoError(t, err)
 }
 
@@ -621,7 +621,7 @@ func TestCommitWithUser(t *testing.T) {
 	require.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
 	require.NoError(t, r.Add(context.TODO(), "README.md"))
 	require.NoError(t, r.Commit(context.TODO(), "This is a test", WithUser("foo@bar.com", "foo.bar")))
-	commit, err := r.LatestCommit(context.TODO())
+	commit, err := r.LatestCommit(context.TODO(), CommitOption{})
 	require.NoError(t, err)
 	assert.Equal(t, "foo.bar", commit.Author)
 	assert.Equal(t, "foo@bar.com", commit.AuthorEmail)
@@ -696,10 +696,10 @@ func TestGetCommitWithChangetset(t *testing.T) {
 	require.NoError(t, r.Add(context.TODO(), "file1.md"))
 	require.NoError(t, r.Commit(context.TODO(), "This is a test", WithUser("foo@bar.com", "foo.bar")))
 
-	currentCommit, err := r.LatestCommit(context.TODO())
+	currentCommit, err := r.LatestCommit(context.TODO(), CommitOption{})
 	require.NoError(t, err)
 
-	c, err := r.GetCommit(context.TODO(), currentCommit.LongHash)
+	c, err := r.GetCommit(context.TODO(), currentCommit.LongHash, CommitOption{DisableDiffDetail: true})
 	require.NoError(t, err)
 
 	require.Len(t, c.Files, 1)
@@ -717,7 +717,7 @@ func TestDiffSinceCommit(t *testing.T) {
 	r, err := Clone(context.TODO(), path, "https://github.com/ovh/cds.git")
 	require.NoError(t, err)
 
-	currentCommit, err := r.LatestCommit(context.TODO())
+	currentCommit, err := r.LatestCommit(context.TODO(), CommitOption{})
 	require.NoError(t, err)
 
 	// Create file 1
