@@ -222,7 +222,7 @@ func (r Repo) Commits(ctx context.Context, from, to string) ([]Commit, error) {
 
 	var commits []Commit
 	for _, c := range commitsString {
-		comm, err := r.GetCommit(ctx, c)
+		comm, err := r.GetCommit(ctx, c, CommitOption{DisableDiffDetail: true})
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func (r Repo) CommitsBetween(ctx context.Context, from, to time.Time, branch str
 
 	var commits []Commit
 	for _, c := range commitsString {
-		comm, err := r.GetCommit(ctx, c)
+		comm, err := r.GetCommit(ctx, c, CommitOption{DisableDiffDetail: true})
 		if err != nil {
 			return nil, err
 		}
@@ -261,7 +261,7 @@ func (r Repo) CommitsBetween(ctx context.Context, from, to time.Time, branch str
 	return commits, nil
 }
 
-func (r Repo) parseDiff(ctx context.Context, hash, diff string) (map[string]File, error) {
+func (r Repo) parseDiff(ctx context.Context, hash, diff string, opt CommitOption) (map[string]File, error) {
 	Files := make(map[string]File)
 
 	// Read line per line the last item
@@ -285,41 +285,42 @@ func (r Repo) parseDiff(ctx context.Context, hash, diff string) (map[string]File
 			Diff:     diff,
 		}
 
-		// Scan the diff output
-		diffScanner := bufio.NewScanner(strings.NewReader(diff))
-		// Raise the MaxTokenSize value to 1024k (default is 64) to handle diff on serialized files (example: svg)
-		diffScanner.Buffer(nil, 1024*1024)
-		var currentHunk *Hunk
-		for diffScanner.Scan() {
-			line := diffScanner.Text()
-			switch {
-			case strings.HasPrefix(line, "@@ "):
-				line := strings.TrimPrefix(line, "@@ ")
-				if currentHunk != nil {
-					f.DiffDetail.Hunks = append(f.DiffDetail.Hunks, *currentHunk)
-					currentHunk = nil
+		//Scan the diff output
+		if !opt.DisableDiffDetail {
+			diffScanner := bufio.NewScanner(strings.NewReader(diff))
+			diffScanner.Buffer(nil, 1024*1024)
+			var currentHunk *Hunk
+			for diffScanner.Scan() {
+				line := diffScanner.Text()
+				switch {
+				case strings.HasPrefix(line, "@@ "):
+					line := strings.TrimPrefix(line, "@@ ")
+					if currentHunk != nil {
+						f.DiffDetail.Hunks = append(f.DiffDetail.Hunks, *currentHunk)
+						currentHunk = nil
+					}
+					currentHunk = new(Hunk)
+					currentHunk.Header = strings.TrimSpace(strings.Split(line, "@@")[0])
+					currentHunk.Content = strings.Join(strings.Split(line, "@@")[1:], "")
+				case currentHunk != nil && strings.HasPrefix(line, "-"):
+					currentHunk.RemovedLines = append(currentHunk.RemovedLines, strings.TrimPrefix(line, "-"))
+					currentHunk.Content += "\n" + line
+				case currentHunk != nil && strings.HasPrefix(line, "+"):
+					currentHunk.AddedLines = append(currentHunk.AddedLines, strings.TrimPrefix(line, "+"))
+					currentHunk.Content += "\n" + line
+				case currentHunk != nil:
+					currentHunk.Content += "\n" + line
 				}
-				currentHunk = new(Hunk)
-				currentHunk.Header = strings.TrimSpace(strings.Split(line, "@@")[0])
-				currentHunk.Content = strings.Join(strings.Split(line, "@@")[1:], "")
-			case currentHunk != nil && strings.HasPrefix(line, "-"):
-				currentHunk.RemovedLines = append(currentHunk.RemovedLines, strings.TrimPrefix(line, "-"))
-				currentHunk.Content += "\n" + line
-			case currentHunk != nil && strings.HasPrefix(line, "+"):
-				currentHunk.AddedLines = append(currentHunk.AddedLines, strings.TrimPrefix(line, "+"))
-				currentHunk.Content += "\n" + line
-			case currentHunk != nil:
-				currentHunk.Content += "\n" + line
 			}
-		}
 
-		if currentHunk != nil {
-			f.DiffDetail.Hunks = append(f.DiffDetail.Hunks, *currentHunk)
-		}
+			if currentHunk != nil {
+				f.DiffDetail.Hunks = append(f.DiffDetail.Hunks, *currentHunk)
+			}
 
-		err = diffScanner.Err()
-		if err != nil {
-			return nil, fmt.Errorf("unable to compute diff on file %s for commit %s: %v", filename, hash, err)
+			err = diffScanner.Err()
+			if err != nil {
+				return nil, fmt.Errorf("unable to compute diff on file %s for commit %s: %v", filename, hash, err)
+			}
 		}
 		Files[filename] = f
 	}
@@ -361,7 +362,7 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 }
 
 // GetCommit returns a commit
-func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
+func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Commit, error) {
 	hash = strings.TrimFunc(hash, func(r rune) bool {
 		return r == '\n' || r == ' ' || r == '\t'
 	})
@@ -388,7 +389,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string) (Commit, error) {
 	c.GPGKeyID = splittedDetails[5]
 
 	fileList := strings.TrimSpace(splittedDetails[6])
-	c.Files, err = r.parseDiff(ctx, hash, fileList)
+	c.Files, err = r.parseDiff(ctx, hash, fileList, opts)
 	return c, err
 }
 
@@ -454,13 +455,13 @@ func (r Repo) ExistsDiff(ctx context.Context) bool {
 }
 
 // LatestCommit returns the latest commit of the current branch
-func (r Repo) LatestCommit(ctx context.Context) (Commit, error) {
+func (r Repo) LatestCommit(ctx context.Context, opts CommitOption) (Commit, error) {
 	c := Commit{}
 	hash, err := r.runCmd(ctx, "git", "rev-parse", "HEAD")
 	if err != nil {
 		return c, err
 	}
-	return r.GetCommit(ctx, hash)
+	return r.GetCommit(ctx, hash, opts)
 }
 
 // CurrentBranch returns the current branch
@@ -760,12 +761,12 @@ func (r Repo) Status(ctx context.Context) (string, error) {
 	return out, nil
 }
 
-func (r Repo) CurrentSnapshot(ctx context.Context) (map[string]File, error) {
+func (r Repo) CurrentSnapshot(ctx context.Context, opts CommitOption) (map[string]File, error) {
 	diffFileList, err := r.Status(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.parseDiff(ctx, "", diffFileList)
+	return r.parseDiff(ctx, "", diffFileList, opts)
 }
 
 func (r Repo) HasDiverged(ctx context.Context) (bool, error) {
@@ -916,7 +917,7 @@ func (r Repo) Tags(ctx context.Context) ([]Tag, error) {
 
 	var tags []Tag
 	for i, c := range commitsString {
-		t, err := r.GetCommit(ctx, c)
+		t, err := r.GetCommit(ctx, c, CommitOption{DisableDiffDetail: true})
 		if err != nil {
 			return nil, err
 		}

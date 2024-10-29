@@ -28,6 +28,10 @@ type Commit struct {
 	GPGKeyID    string
 }
 
+type CommitOption struct {
+	DisableDiffDetail bool
+}
+
 type Tag struct {
 	Message string
 	Commit
