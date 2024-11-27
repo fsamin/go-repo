@@ -956,7 +956,7 @@ type DescribeOpt struct {
 	LongSemver       bool
 	Long             bool
 	RequireAnnotated bool
-	Match            string
+	Match            []string
 	DirtyMark        string
 }
 
@@ -976,7 +976,7 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 		opt = &DescribeOpt{
 			DirtySemver: true,
 			Long:        true,
-			Match:       "v[0-9]*",
+			Match:       []string{"v[0-9]*"},
 			DirtyMark:   "-dirty",
 		}
 	}
@@ -984,8 +984,8 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 	if !opt.RequireAnnotated {
 		args = append(args, "--tags")
 	}
-	if opt.Match != "" {
-		args = append(args, "--match", opt.Match)
+	for _, m := range opt.Match {
+		args = append(args, "--match", m)
 	}
 
 	// git fetch --prune --unshallow

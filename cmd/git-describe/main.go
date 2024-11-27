@@ -25,9 +25,8 @@ func main() {
 				Name:  "long-semver",
 				Value: false,
 			},
-			&cli.StringFlag{
-				Name:  "match",
-				Value: "v[0-9]*",
+			&cli.StringSliceFlag{
+				Name: "match",
 			},
 			&cli.StringFlag{
 				Name:  "dirty-mark",
@@ -56,7 +55,7 @@ func main() {
 			var opts = &repo.DescribeOpt{
 				Long:             ctx.Bool("long"),
 				LongSemver:       ctx.Bool("long-semver"),
-				Match:            ctx.String("match"),
+				Match:            ctx.StringSlice("match"),
 				DirtySemver:      ctx.Bool("dirty-semver"),
 				DirtyMark:        ctx.String("dirty-mark"),
 				RequireAnnotated: ctx.Bool("required-annotated"),
