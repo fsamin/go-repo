@@ -992,7 +992,7 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 	_, _ = r.runCmd(ctx, "git", "fetch", "--prune", "--unshallow") // skip all errors
 
 	// git fetch --tags
-	if _, err := r.runCmd(ctx, "git", "fetch", "--tags"); err != nil {
+	if _, err := r.runCmd(ctx, "git", "fetch", "--tags", "--force"); err != nil {
 		return nil, err
 	}
 
