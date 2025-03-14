@@ -101,7 +101,7 @@ func TestCloneFromHTTPShouldSuccess(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
-	_, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")), WithVerbose(t.Logf))
+	_, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("fsamin", os.Getenv("TEST_TOKEN")), WithVerbose(t.Logf), WithDepth(1))
 	require.NoError(t, err)
 }
 
