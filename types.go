@@ -13,6 +13,7 @@ type Repo struct {
 	pgpKey  *pgpKey
 	verbose bool
 	logger  func(format string, i ...interface{})
+	depth   int
 }
 
 // Commit represent a git commit

@@ -35,7 +35,12 @@ func Clone(ctx context.Context, path, url string, opts ...Option) (Repo, error) 
 	if r.verbose {
 		r.log("Cloning %s\n", r.url)
 	}
-	_, err := r.runCmd(ctx, "git", "clone", r.url, ".")
+	var args = []string{"clone"}
+	if r.depth > 0 {
+		args = append(args, "--depth", strconv.Itoa(r.depth))
+	}
+	args = append(args, r.url, ".")
+	_, err := r.runCmd(ctx, "git", args...)
 	if err != nil {
 		return r, err
 	}
@@ -818,6 +823,13 @@ func WithUser(email, name string) Option {
 			return fmt.Errorf("command 'git config user.name' failed: %v (%s)", err, out)
 		}
 		return err
+	}
+}
+
+func WithDepth(d int) Option {
+	return func(ctx context.Context, r *Repo) error {
+		r.depth = d
+		return nil
 	}
 }
 
