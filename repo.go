@@ -445,6 +445,30 @@ func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File
 	return result, nil
 }
 
+func (r Repo) DiffBetweenBranches(ctx context.Context, branchFrom, branchTo string) (map[string]File, error) {
+	branchArg := branchTo + "..." + branchFrom
+	details, err := r.runCmd(ctx, "git", "diff", branchArg, "--name-status")
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]File)
+
+	splittedFiles := strings.Split(details, "\n")
+	for _, fLine := range splittedFiles {
+		if len(strings.Trim(fLine, " ")) == 0 {
+			continue
+		}
+		fileData := strings.Split(fLine, "\t")
+		f := File{
+			Status:   fileData[0],
+			Filename: fileData[1],
+		}
+		result[f.Filename] = f
+	}
+	return result, nil
+}
+
 func (r Repo) Diff(ctx context.Context, hash string, filename string) (string, error) {
 	if hash == "" {
 		return r.runCmd(ctx, "git", "diff", "--pretty=", "--", filename)
