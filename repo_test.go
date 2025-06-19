@@ -708,6 +708,37 @@ func TestGetCommitWithChangetset(t *testing.T) {
 
 }
 
+func TestDiffBetweenBranches(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/ovh/cds.git")
+	require.NoError(t, err)
+
+	require.NoError(t, r.CheckoutNewBranch(context.Background(), "TestDiffBetweenBranches"))
+
+	// Create file 1
+	require.NoError(t, r.Write("file1.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add(context.TODO(), "file1.md"))
+	require.NoError(t, r.Commit(context.TODO(), "This is a test", WithUser("foo@bar.com", "foo.bar")))
+
+	// Create file 2
+	require.NoError(t, r.Write("file2.md", strings.NewReader("this is also a test")))
+	require.NoError(t, r.Add(context.TODO(), "file2.md"))
+	require.NoError(t, r.Commit(context.TODO(), "This is also a test", WithUser("foo@bar.com", "foo.bar")))
+
+	files, err := r.DiffBetweenBranches(context.Background(), "TestDiffBetweenBranches", "master")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(files))
+	_, hasFile1 := files["file1.md"]
+	require.True(t, hasFile1)
+	_, hasFile2 := files["file2.md"]
+	require.True(t, hasFile2)
+	t.Logf("%+v", files)
+}
+
 func TestDiffSinceCommit(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
