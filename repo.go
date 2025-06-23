@@ -32,7 +32,7 @@ func Clone(ctx context.Context, path, cloneURL string, opts ...Option) (Repo, er
 			return r, err
 		}
 	}
-	if r.verbose || true {
+	if r.verbose {
 		safeURL := r.url
 		if strings.HasPrefix(r.url, "https") {
 			u, err := url.ParseRequestURI(r.url)
