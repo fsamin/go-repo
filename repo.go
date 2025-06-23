@@ -25,15 +25,25 @@ import (
 var urlRegExp = regexp.MustCompile(`https:\/\/[-a-zA-Z0-9@:%._\+#?&//=]*`)
 
 // Clone a git repository from the specified url to the destination path. Use Options to force the use of SSH Key and or PGP Key on this repo
-func Clone(ctx context.Context, path, url string, opts ...Option) (Repo, error) {
-	r := Repo{path: path, url: url}
+func Clone(ctx context.Context, path, cloneURL string, opts ...Option) (Repo, error) {
+	r := Repo{path: path, url: cloneURL}
 	for _, f := range opts {
 		if err := f(ctx, &r); err != nil {
 			return r, err
 		}
 	}
-	if r.verbose {
-		r.log("Cloning %s\n", r.url)
+	if r.verbose || true {
+		safeURL := r.url
+		if strings.HasPrefix(r.url, "https") {
+			u, err := url.ParseRequestURI(r.url)
+			if err != nil {
+				r.log("unable to parse url")
+			} else {
+				safeURL = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+			}
+		}
+		r.log("Cloning %s\n", safeURL)
+
 	}
 	var args = []string{"clone"}
 	if r.depth > 0 {
