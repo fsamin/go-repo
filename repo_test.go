@@ -625,7 +625,7 @@ func TestCommitWithUser(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "foo.bar", commit.Author)
 	assert.Equal(t, "foo@bar.com", commit.AuthorEmail)
-
+	t.Logf("%+v", commit)
 }
 
 func TestCommitsBetween(t *testing.T) {
@@ -778,4 +778,33 @@ func TestDiffSinceCommit(t *testing.T) {
 	require.True(t, has)
 	_, has = results["file2.md"]
 	require.True(t, has)
+}
+
+func TestParentCommit(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/ovh/cds.git")
+	require.NoError(t, err)
+
+	currentCommit, err := r.LatestCommit(context.TODO(), CommitOption{})
+	require.NoError(t, err)
+
+	t.Logf("%+v", currentCommit.LongHash)
+
+	parentCommit, err := r.ParentCommit(context.TODO(), currentCommit.LongHash)
+	require.NoError(t, err)
+
+	t.Logf("%+v", parentCommit.LongHash)
+
+	require.NotEmpty(t, parentCommit.LongHash)
+
+	ancestorCommit, err := r.ParentCommit(context.TODO(), parentCommit.LongHash)
+	require.NoError(t, err)
+
+	t.Logf("%+v", ancestorCommit.LongHash)
+
+	require.NotEmpty(t, ancestorCommit.LongHash)
 }
