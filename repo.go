@@ -1109,3 +1109,11 @@ func slicePop[T any](s []T) ([]T, T) {
 	s = append(s[:i], s[i+1:]...)
 	return s, elem
 }
+
+func (r Repo) ParentCommit(ctx context.Context, hash string) (Commit, error) {
+	parent, err := r.runCmd(ctx, "git", "rev-parse", hash+"^")
+	if err != nil {
+		return Commit{}, err
+	}
+	return r.GetCommit(ctx, parent, CommitOption{DisableDiffDetail: true})
+}
