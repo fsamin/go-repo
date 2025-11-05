@@ -276,11 +276,11 @@ func (r Repo) CommitsBetween(ctx context.Context, from, to time.Time, branch str
 	return commits, nil
 }
 
-func (r Repo) parseDiff(ctx context.Context, hash, diff string, opt CommitOption) (map[string]File, error) {
+func (r Repo) parseDiff(ctx context.Context, hash, diffFileList string, opt CommitOption) (map[string]File, error) {
 	Files := make(map[string]File)
 
 	// Read line per line the last item
-	scanner := bufio.NewScanner(strings.NewReader(diff))
+	scanner := bufio.NewScanner(strings.NewReader(diffFileList))
 	for scanner.Scan() {
 		s := scanner.Text()
 		var tuple []string
@@ -289,19 +289,21 @@ func (r Repo) parseDiff(ctx context.Context, hash, diff string, opt CommitOption
 		}
 		filename := strings.TrimSpace(tuple[1])
 		status := strings.TrimSpace(tuple[0])
-		diff, err := r.Diff(ctx, hash, filename)
-		if err != nil {
-			return nil, fmt.Errorf("unable to compute diff on file %s for commit %s: %v", filename, hash, err)
-		}
 
 		f := File{
 			Filename: filename,
 			Status:   status,
-			Diff:     diff,
 		}
 
 		//Scan the diff output
 		if !opt.DisableDiffDetail {
+
+			diff, err := r.Diff(ctx, hash, filename)
+			if err != nil {
+				return nil, fmt.Errorf("unable to compute diff on file %s for commit %s: %v", filename, hash, err)
+			}
+			f.Diff = diff
+
 			diffScanner := bufio.NewScanner(strings.NewReader(diff))
 			// Raise the MaxTokenSize value to 1024k (default is 64) to handle diff on serialized files (example: svg)
 			diffScanner.Buffer(nil, 1024*1024)
