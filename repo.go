@@ -422,12 +422,12 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 		return c, err
 	}
 
-	subject, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%s", "--name-status")
+	subject, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%s", "--no-patch")
 	if err != nil {
 		return c, err
 	}
 	c.Subject = subject
-	body, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%b", "--name-status")
+	body, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%b", "--no-patch")
 	if err != nil {
 		return c, err
 	}
