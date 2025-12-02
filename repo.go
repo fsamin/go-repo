@@ -356,7 +356,7 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	t := Tag{}
-	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=||%at||%an||%ae||%s||%b||%H||%GK||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=||%at||%an||%ae||%H||%GK||", "--name-status")
 	if err != nil {
 		return t, err
 	}
@@ -376,6 +376,18 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 	t.LongHash = splittedDetails[5]
 	t.Hash = t.LongHash[:7]
 	t.GPGKeyID = splittedDetails[6]
+
+	subject, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%s", "--no-patch")
+	if err != nil {
+		return t, err
+	}
+	t.Subject = subject
+	body, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%b", "--no-patch")
+	if err != nil {
+		return t, err
+	}
+	t.Body = body
+
 	return t, err
 }
 
@@ -385,15 +397,15 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%s||%b||%GK||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%GK||", "--name-status")
 	if err != nil {
 		return c, err
 	}
 
 	c.LongHash = hash
-	c.Hash = hash[:7]
+	c.Hash = hash[:5]
 
-	splittedDetails := strings.SplitN(details, "||", 7)
+	splittedDetails := strings.SplitN(details, "||", 5)
 
 	ts, err := strconv.ParseInt(splittedDetails[0], 10, 64)
 	if err != nil {
@@ -402,12 +414,25 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 	c.Date = time.Unix(ts, 0)
 	c.Author = splittedDetails[1]
 	c.AuthorEmail = splittedDetails[2]
-	c.Subject = splittedDetails[3]
-	c.Body = splittedDetails[4]
-	c.GPGKeyID = splittedDetails[5]
+	c.GPGKeyID = splittedDetails[3]
 
-	fileList := strings.TrimSpace(splittedDetails[6])
+	fileList := strings.TrimSpace(splittedDetails[4])
 	c.Files, err = r.parseDiff(ctx, hash, fileList, opts)
+	if err != nil {
+		return c, err
+	}
+
+	subject, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%s", "--no-patch")
+	if err != nil {
+		return c, err
+	}
+	c.Subject = strings.TrimSuffix(subject, "\n")
+	body, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%b", "--no-patch")
+	if err != nil {
+		return c, err
+	}
+	c.Body = strings.TrimSuffix(body, "\n")
+
 	return c, err
 }
 
