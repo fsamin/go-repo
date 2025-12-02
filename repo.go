@@ -426,12 +426,12 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 	if err != nil {
 		return c, err
 	}
-	c.Subject = subject
+	c.Subject = strings.TrimSuffix(subject, "\n")
 	body, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%b", "--no-patch")
 	if err != nil {
 		return c, err
 	}
-	c.Body = body
+	c.Body = strings.TrimSuffix(body, "\n")
 
 	return c, err
 }
