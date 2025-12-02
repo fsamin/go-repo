@@ -377,12 +377,12 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 	t.Hash = t.LongHash[:7]
 	t.GPGKeyID = splittedDetails[6]
 
-	subject, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%s", "--name-status")
+	subject, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%s", "--no-patch")
 	if err != nil {
 		return t, err
 	}
 	t.Subject = subject
-	body, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%b", "--name-status")
+	body, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%b", "--no-patch")
 	if err != nil {
 		return t, err
 	}
