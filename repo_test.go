@@ -826,6 +826,6 @@ func TestCommitWithPipies(t *testing.T) {
 	commit, err := r.LatestCommit(context.TODO(), CommitOption{})
 	require.NoError(t, err)
 
-	require.Equal(t, "this is a test with || because it s cool", commit.Subject)
+	require.Equal(t, "\"this is a test with || because it s cool\"", commit.Subject)
 	require.Equal(t, "", commit.Body)
 }
