@@ -808,3 +808,23 @@ func TestParentCommit(t *testing.T) {
 
 	require.NotEmpty(t, ancestorCommit.LongHash)
 }
+
+func TestCommitWithPipies(t *testing.T) {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name())
+	defer os.RemoveAll(path)
+
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git", WithHTTPAuth("user", "mypassword"))
+	require.NoError(t, err)
+
+	require.NoError(t, r.CheckoutNewBranch(context.TODO(), "TestBranch"))
+	require.NoError(t, r.Write("README.md", strings.NewReader("this is a test")))
+	require.NoError(t, r.Add(context.TODO(), "README.md"))
+	require.NoError(t, r.Commit(context.TODO(), "this is a test with || because it s cool"))
+
+	commit, err := r.LatestCommit(context.TODO(), CommitOption{})
+	require.NoError(t, err)
+
+	require.Equal(t, "this is a test with || because it s cool", commit.Subject)
+}
