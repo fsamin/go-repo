@@ -371,11 +371,9 @@ func (r Repo) GetTag(ctx context.Context, tagName string) (Tag, error) {
 	t.Date = time.Unix(ts, 0)
 	t.Author = splittedDetails[1]
 	t.AuthorEmail = splittedDetails[2]
-	t.Subject = splittedDetails[3]
-	t.Body = splittedDetails[4]
-	t.LongHash = splittedDetails[5]
-	t.Hash = t.LongHash[:7]
-	t.GPGKeyID = splittedDetails[6]
+	t.LongHash = splittedDetails[3]
+	t.Hash = t.LongHash[:5]
+	t.GPGKeyID = splittedDetails[4]
 
 	subject, err := r.runCmd(ctx, "git", "show", tagName, "--pretty=%s", "--no-patch")
 	if err != nil {
