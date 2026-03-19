@@ -3,10 +3,10 @@ package repo
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
-
-	"github.com/pkg/errors"
+	"strings"
 )
 
 func (r Repo) runCmd(ctx context.Context, name string, args ...string) (stdOut string, err error) {
@@ -30,7 +30,12 @@ func (r Repo) runCmd(ctx context.Context, name string, args ...string) (stdOut s
 	}
 
 	if r.verbose {
-		r.log("Running command %+v\n", cmd)
+		// Sanitize arguments before logging to avoid leaking credentials
+		safeArgs := make([]string, len(args))
+		for i, a := range args {
+			safeArgs[i] = sanitizeURL(a)
+		}
+		r.log("Running command: %s %s\n", name, strings.Join(safeArgs, " "))
 	}
 
 	// set lang to english to be able to parse git messages
@@ -43,13 +48,13 @@ func (r Repo) runCmd(ctx context.Context, name string, args ...string) (stdOut s
 
 	if cmd.ProcessState == nil || !cmd.ProcessState.Success() {
 		if len(stdErr) > 0 {
-			return stdOut, errors.Errorf("%s (%v)", stdErr, runErr)
+			return stdOut, fmt.Errorf("%s (%w)", sanitizeErrorMessage(stdErr), runErr)
 		}
-		return stdOut, errors.Errorf("exited with error: %v", runErr)
+		return stdOut, fmt.Errorf("exited with error: %w", runErr)
 	}
 
 	if runErr != nil {
-		return stdOut, errors.Errorf("%s (%v)", stdErr, runErr)
+		return stdOut, fmt.Errorf("%s (%w)", sanitizeErrorMessage(stdErr), runErr)
 	}
 
 	btes := []byte(stdOut)

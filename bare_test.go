@@ -2,7 +2,7 @@ package repo
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,7 +35,7 @@ func TestBare(t *testing.T) {
 
 	readmeReader, err := repo.ReadFile(context.TODO(), "README.md")
 	require.NoError(t, err)
-	readmeContent, err := ioutil.ReadAll(readmeReader)
+	readmeContent, err := io.ReadAll(readmeReader)
 	require.NoError(t, err)
 	t.Logf("%s", string(readmeContent))
 

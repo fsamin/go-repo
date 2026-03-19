@@ -7,13 +7,14 @@ import (
 
 // Repo is the main type of this lib
 type Repo struct {
-	path    string
-	url     string
-	sshKey  *sshKey
-	pgpKey  *pgpKey
-	verbose bool
-	logger  func(format string, i ...interface{})
-	depth   int
+	path                    string
+	url                     string
+	sshKey                  *sshKey
+	pgpKey                  *pgpKey
+	verbose                 bool
+	logger                  func(format string, i ...interface{})
+	depth                   int
+	disableStrictHostKeyChk bool
 }
 
 // Commit represent a git commit

@@ -2,7 +2,6 @@ package repo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,10 +27,19 @@ func (r Repo) setupSSHKey() ([]string, error) {
 		return nil, fmt.Errorf("no ssh keys to setup")
 	}
 
-	gitSSHCmd := exec.Command("ssh").Path
-	gitSSHCmd += " -i " + r.sshKey.filename
+	sshPath := exec.Command("ssh").Path
+	escapedKeyFile := shellEscape(r.sshKey.filename)
+
+	gitSSHCmd := sshPath + " -i " + escapedKeyFile
 	gitSSHCmd += " -o IdentitiesOnly=yes"
-	gitSSHCmd += " -o StrictHostKeyChecking=no"
+
+	// Use accept-new by default: accepts new host keys but rejects changed ones.
+	// Only disable StrictHostKeyChecking if explicitly requested via WithStrictHostKeyCheckingDisabled.
+	if r.disableStrictHostKeyChk {
+		gitSSHCmd += " -o StrictHostKeyChecking=no"
+	} else {
+		gitSSHCmd += " -o StrictHostKeyChecking=accept-new"
+	}
 
 	keyDir := filepath.Dir(r.sshKey.filename)
 
@@ -48,7 +56,7 @@ func (r Repo) setupSSHKey() ([]string, error) {
 		wrapperPath = filepath.Join(keyDir, "gitwrapper")
 	}
 
-	if err := ioutil.WriteFile(wrapperPath, []byte(wrapper), os.FileMode(0700)); err != nil {
+	if err := os.WriteFile(wrapperPath, []byte(wrapper), os.FileMode(0700)); err != nil {
 		return nil, err
 	}
 

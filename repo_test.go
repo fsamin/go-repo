@@ -3,7 +3,6 @@ package repo
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 
 	"os/exec"
@@ -88,7 +87,7 @@ func TestCloneFromSSHShouldSuccess(t *testing.T) {
 
 	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 
-	pkey, err := ioutil.ReadFile("travis_id_rsa")
+	pkey, err := os.ReadFile("travis_id_rsa")
 	if err != nil {
 		t.SkipNow()
 	}
@@ -164,7 +163,7 @@ func TestExistsDiff(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, r.ExistsDiff(context.TODO()))
 
-	require.NoError(t, ioutil.WriteFile(path+"/test.txt", []byte("test"), 0755))
+	require.NoError(t, os.WriteFile(path+"/test.txt", []byte("test"), 0755))
 	require.NoError(t, r.Add(context.TODO(), "test.txt"))
 	assert.True(t, r.ExistsDiff(context.TODO()))
 }
@@ -552,7 +551,7 @@ func TestPush(t *testing.T) {
 
 	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 
-	privateKey, err := ioutil.ReadFile("travis_id_rsa")
+	privateKey, err := os.ReadFile("travis_id_rsa")
 	if err != nil {
 		t.SkipNow()
 	}

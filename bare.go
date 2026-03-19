@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -22,7 +23,7 @@ func CloneBare(ctx context.Context, path, url string, opts ...Option) (Repo, err
 		}
 	}
 	if r.verbose {
-		r.log("Cloning %s\n", r.url)
+		r.log("Cloning %s\n", sanitizeURL(r.url))
 	}
 	_, err := r.runCmd(ctx, "git", "clone", "--bare", r.url, ".")
 	if err != nil {
@@ -115,6 +116,9 @@ func (b BareRepo) FileSize(ctx context.Context, filename string) (int64, error) 
 }
 
 func (b BareRepo) ReadFile(ctx context.Context, filename string) (io.Reader, error) {
+	if _, err := validateRef(filename); err != nil {
+		return nil, fmt.Errorf("invalid filename: %w", err)
+	}
 	output, err := b.repo.runCmd(ctx, "git", "show", "HEAD:"+filename)
 	if err != nil {
 		return nil, err
