@@ -119,6 +119,49 @@ func TestDescribeRefOnBareRepo(t *testing.T) {
 	assert.Equal(t, 0, d.Distance)
 }
 
+func TestDiffMergeBaseOnBareRepo(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	_, err := CloneBare(context.TODO(), path, "file://"+fixture, WithFilter("blob:none"))
+	require.NoError(t, err)
+	b, err := NewBare(context.TODO(), path)
+	require.NoError(t, err)
+
+	// feat: one modification, one rename, one addition
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "README.md"), []byte("# modified"), os.FileMode(0644)))
+	execGitIn(t, fixture, "mv", "main.go", "renamed.go")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "handler.go"), []byte("package handler"), os.FileMode(0644)))
+	execGitIn(t, fixture, "add", ".")
+	execGitIn(t, fixture, "commit", "-q", "-m", "feat changes")
+
+	// master diverges: its own commits must not appear in the changeset
+	execGitIn(t, fixture, "checkout", "-q", "master")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "master-only.go"), []byte("package master"), os.FileMode(0644)))
+	execGitIn(t, fixture, "add", ".")
+	execGitIn(t, fixture, "commit", "-q", "-m", "master moves on")
+
+	require.NoError(t, b.repo.FetchBranchWithoutCheckout(context.TODO(), "origin", "feat"))
+	require.NoError(t, b.repo.FetchBranchWithoutCheckout(context.TODO(), "origin", "master"))
+
+	missingBefore := execGitIn(t, path, "rev-list", "--objects", "--missing=print", "refs/heads/feat")
+
+	files, err := b.repo.DiffMergeBase(context.TODO(), "refs/heads/master", "refs/heads/feat")
+	require.NoError(t, err)
+
+	require.Len(t, files, 4)
+	assert.Equal(t, "M", files["README.md"].Status)
+	assert.Equal(t, "D", files["main.go"].Status, "a rename must be reported as delete+add")
+	assert.Equal(t, "A", files["renamed.go"].Status, "a rename must be reported as delete+add")
+	assert.Equal(t, "A", files["handler.go"].Status)
+	assert.NotContains(t, files, "master-only.go", "commits on the from side must not appear")
+
+	// --no-renames skips similarity computation: no blob was lazily fetched
+	assert.Equal(t, missingBefore, execGitIn(t, path, "rev-list", "--objects", "--missing=print", "refs/heads/feat"))
+}
+
 func TestBare(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	t.Logf("Testing in %s", path)

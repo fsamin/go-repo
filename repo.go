@@ -483,6 +483,29 @@ func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File
 	return result, nil
 }
 
+// DiffMergeBase returns the files changed between merge-base(from, to) and to.
+// Renames are reported as delete+add (--no-renames); only commit trees are
+// read, so it works on bare and partial clones.
+func (r Repo) DiffMergeBase(ctx context.Context, from, to string) (map[string]File, error) {
+	details, err := r.runCmd(ctx, "git", "diff", "--name-status", "--no-renames", "--merge-base", from, to)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]File)
+	for _, fLine := range strings.Split(details, "\n") {
+		if len(strings.Trim(fLine, " ")) == 0 {
+			continue
+		}
+		fileData := strings.Split(fLine, "\t")
+		if len(fileData) < 2 {
+			continue
+		}
+		f := File{Status: fileData[0], Filename: fileData[1]}
+		result[f.Filename] = f
+	}
+	return result, nil
+}
+
 func (r Repo) DiffBetweenBranches(ctx context.Context, branchFrom, branchTo string) (map[string]File, error) {
 	branchArg := branchTo + "..." + branchFrom
 	details, err := r.runCmd(ctx, "git", "diff", branchArg, "--name-status")
