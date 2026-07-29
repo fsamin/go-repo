@@ -782,6 +782,28 @@ func TestDescribeDirtyAndRef(t *testing.T) {
 	assert.Equal(t, "1.0.0+1."+featHash, d.SemverString)
 }
 
+func TestDiffBetweenBranchesWithRename(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	execGitIn(t, fixture, "mv", "main.go", "renamed.go")
+	execGitIn(t, fixture, "commit", "-q", "-m", "rename main.go")
+	execGitIn(t, fixture, "checkout", "-q", "master")
+
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "file://"+fixture)
+	require.NoError(t, err)
+
+	// A rename must yield delete+add: with rename detection it would be a
+	// single R line and the new path would be lost by the parsing
+	files, err := r.DiffBetweenBranches(context.TODO(), "origin/feat", "master")
+	require.NoError(t, err)
+	require.Len(t, files, 2)
+	assert.Equal(t, "D", files["main.go"].Status)
+	assert.Equal(t, "A", files["renamed.go"].Status)
+}
+
 func TestGetCommitWithChangetset(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)

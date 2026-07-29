@@ -506,9 +506,12 @@ func (r Repo) DiffMergeBase(ctx context.Context, from, to string) (map[string]Fi
 	return result, nil
 }
 
+// DiffBetweenBranches returns the files changed on branchFrom since its
+// merge-base with branchTo. Renames are reported as delete+add (--no-renames),
+// so both the old and the new path appear in the result.
 func (r Repo) DiffBetweenBranches(ctx context.Context, branchFrom, branchTo string) (map[string]File, error) {
 	branchArg := branchTo + "..." + branchFrom
-	details, err := r.runCmd(ctx, "git", "diff", branchArg, "--name-status")
+	details, err := r.runCmd(ctx, "git", "diff", branchArg, "--name-status", "--no-renames")
 	if err != nil {
 		return nil, err
 	}
