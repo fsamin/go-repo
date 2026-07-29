@@ -85,6 +85,12 @@ func checkRefsDirectory(path string) bool {
 	return true
 }
 
+// Repo returns the underlying Repo to access methods not exposed on BareRepo;
+// callers must stick to commands that do not require a worktree.
+func (b BareRepo) Repo() Repo {
+	return b.repo
+}
+
 func (b BareRepo) ListFiles(ctx context.Context) ([]string, error) {
 	output, err := b.repo.runCmd(ctx, "git", "ls-tree", "--full-tree", "--name-only", "-r", "HEAD")
 	if err != nil {
