@@ -725,6 +725,63 @@ func TestDescribe(t *testing.T) {
 	t.Logf("git describe: %+v", d)
 }
 
+func TestDescribeDirtyAndRef(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	execGitIn(t, fixture, "tag", "v1.0.0")
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "feat.go"), []byte("package feat"), os.FileMode(0644)))
+	execGitIn(t, fixture, "add", ".")
+	execGitIn(t, fixture, "commit", "-q", "-m", "feat commit")
+	execGitIn(t, fixture, "checkout", "-q", "master")
+
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "file://"+fixture)
+	require.NoError(t, err)
+
+	masterHash := "g" + execGitIn(t, path, "rev-parse", "--short", "HEAD")
+	opt := DescribeOpt{DirtySemver: true, Long: true, Match: []string{"v[0-9]*"}, DirtyMark: "-dirty"}
+
+	// Clean worktree
+	d, err := r.Describe(context.TODO(), &opt)
+	require.NoError(t, err)
+	assert.False(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-0-"+masterHash, d.Raw)
+	assert.Equal(t, masterHash, d.Suffix)
+	assert.Equal(t, "1.0.0", d.SemverString)
+
+	// Modified tracked file: dirty is detected and reported in every field
+	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "README.md"), []byte("modified"), os.FileMode(0644)))
+	d, err = r.Describe(context.TODO(), &opt)
+	require.NoError(t, err)
+	assert.True(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-0-"+masterHash+"-dirty", d.Raw)
+	assert.Equal(t, "v1.0.0", d.Tag)
+	assert.Equal(t, masterHash+"-dirty", d.Suffix)
+	assert.Equal(t, "1.0.0+0."+masterHash+".dirty", d.SemverString)
+
+	// Same dirty worktree but empty DirtyMark: no --dirty flag, never dirty
+	d, err = r.Describe(context.TODO(), &DescribeOpt{DirtySemver: true, Long: true, Match: []string{"v[0-9]*"}})
+	require.NoError(t, err)
+	assert.False(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-0-"+masterHash, d.Raw)
+	assert.Equal(t, "1.0.0", d.SemverString)
+
+	// Ref: describes the target branch, not the checkout; the dirty check is
+	// skipped even with a DirtyMark set (git rejects --dirty on a commit-ish),
+	// and the still-dirty worktree must not leak into the result
+	featHash := "g" + execGitIn(t, path, "rev-parse", "--short", "origin/feat")
+	optRef := opt
+	optRef.Ref = "origin/feat"
+	d, err = r.Describe(context.TODO(), &optRef)
+	require.NoError(t, err)
+	assert.False(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-1-"+featHash, d.Raw)
+	assert.Equal(t, 1, d.Distance)
+	assert.Equal(t, "1.0.0+1."+featHash, d.SemverString)
+}
+
 func TestGetCommitWithChangetset(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)

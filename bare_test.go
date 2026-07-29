@@ -66,6 +66,59 @@ func TestFetchBranchWithoutCheckoutOnBareRepo(t *testing.T) {
 	assert.Equal(t, wantAmended, execGitIn(t, path, "rev-parse", "refs/heads/feat"))
 }
 
+func TestDescribeRefOnBareRepo(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	execGitIn(t, fixture, "tag", "v1.0.0")
+
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	_, err := CloneBare(context.TODO(), path, "file://"+fixture, WithFilter("blob:none"))
+	require.NoError(t, err)
+	b, err := NewBare(context.TODO(), path)
+	require.NoError(t, err)
+
+	// One commit on a feature branch after the clone
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "feat.go"), []byte("package feat"), os.FileMode(0644)))
+	execGitIn(t, fixture, "add", ".")
+	execGitIn(t, fixture, "commit", "-q", "-m", "feat commit")
+	require.NoError(t, b.repo.FetchBranchWithoutCheckout(context.TODO(), "origin", "feat"))
+
+	featHash := "g" + execGitIn(t, path, "rev-parse", "--short", "refs/heads/feat")
+
+	// Empty DirtyMark: no --dirty flag, which git rejects on bare repositories
+	opt := DescribeOpt{Long: true, Match: []string{"v[0-9]*"}, Ref: "refs/heads/feat"}
+	d, err := b.repo.Describe(context.TODO(), &opt)
+	require.NoError(t, err)
+	require.NotNil(t, d.Semver)
+	assert.Equal(t, "v1.0.0-1-"+featHash, d.Raw)
+	assert.Equal(t, "v1.0.0", d.Tag)
+	assert.Equal(t, 1, d.Distance)
+	assert.Equal(t, featHash, d.Hash)
+	assert.Equal(t, featHash, d.Suffix)
+	assert.Equal(t, "1.0.0+1."+featHash, d.SemverString)
+	assert.False(t, d.Dirty)
+
+	// A tag created after the clone must be seen: Describe fetches tags itself
+	execGitIn(t, fixture, "tag", "v1.1.0")
+	d, err = b.repo.Describe(context.TODO(), &opt)
+	require.NoError(t, err)
+	require.NotNil(t, d.Semver)
+	assert.Equal(t, "v1.1.0-0-"+featHash, d.Raw)
+	assert.Equal(t, "v1.1.0", d.Tag)
+	assert.Equal(t, 0, d.Distance)
+	assert.Equal(t, "1.1.0", d.SemverString)
+
+	// Ref selection: master is still described as v1.0.0
+	masterHash := "g" + execGitIn(t, path, "rev-parse", "--short", "refs/heads/master")
+	d, err = b.repo.Describe(context.TODO(), &DescribeOpt{Long: true, Match: []string{"v[0-9]*"}, Ref: "refs/heads/master"})
+	require.NoError(t, err)
+	assert.Equal(t, "v1.0.0-0-"+masterHash, d.Raw)
+	assert.Equal(t, "v1.0.0", d.Tag)
+	assert.Equal(t, 0, d.Distance)
+}
+
 func TestBare(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	t.Logf("Testing in %s", path)

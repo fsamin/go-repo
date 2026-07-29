@@ -1052,7 +1052,10 @@ type DescribeOpt struct {
 	Long             bool
 	RequireAnnotated bool
 	Match            []string
-	DirtyMark        string
+	// DirtyMark suffixes a dirty worktree description; empty disables the dirty check
+	DirtyMark string
+	// Ref is the commit-ish to describe; HEAD when empty (implies no dirty check)
+	Ref string
 }
 
 type Description struct {
@@ -1075,12 +1078,19 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 			DirtyMark:   "-dirty",
 		}
 	}
-	args := []string{"describe", "--long", "--dirty=" + opt.DirtyMark, "--always"}
+	args := []string{"describe", "--long", "--always"}
+	dirtyEnabled := opt.DirtyMark != "" && opt.Ref == ""
+	if dirtyEnabled {
+		args = append(args, "--dirty="+opt.DirtyMark)
+	}
 	if !opt.RequireAnnotated {
 		args = append(args, "--tags")
 	}
 	for _, m := range opt.Match {
 		args = append(args, "--match", m)
+	}
+	if opt.Ref != "" {
+		args = append(args, opt.Ref)
 	}
 
 	// git fetch --prune --unshallow
@@ -1104,7 +1114,7 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 		Raw: description,
 	}
 
-	if strings.HasSuffix(description, opt.DirtyMark) {
+	if dirtyEnabled && strings.HasSuffix(description, opt.DirtyMark) {
 		output.Dirty = true
 		description = strings.TrimSuffix(description, opt.DirtyMark)
 	}
