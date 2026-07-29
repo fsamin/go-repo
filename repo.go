@@ -599,6 +599,18 @@ func (r Repo) LocalBranchExists(ctx context.Context, branch string) (exists, has
 	return
 }
 
+// FetchBranchWithoutCheckout fetches the given branch with an explicit refspec,
+// updating refs/heads/<branch> without touching the worktree, unlike
+// FetchRemoteBranch; the "+" allows non-fast-forward updates (force-push).
+// Works on bare repositories, which have no default fetch refspec.
+func (r Repo) FetchBranchWithoutCheckout(ctx context.Context, remote, branch string) error {
+	refspec := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch)
+	if _, err := r.runCmd(ctx, "git", "fetch", remote, refspec); err != nil {
+		return fmt.Errorf("unable to git fetch branch %s: %s", branch, err)
+	}
+	return nil
+}
+
 // FetchRemoteBranch runs a git fetch then checkout the remote branch
 func (r Repo) FetchRemoteBranch(ctx context.Context, remote, branch string) error {
 	if _, err := r.runCmd(ctx, "git", "fetch", remote); err != nil {

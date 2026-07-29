@@ -33,25 +33,32 @@ func TestClone(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// execGitIn runs a git command in dir with a neutral identity and signing
+// disabled, so tests do not depend on the developer's global git config.
+func execGitIn(t *testing.T, dir string, args ...string) string {
+	allArgs := append([]string{"-C", dir,
+		"-c", "user.name=test", "-c", "user.email=test@test.local",
+		"-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false",
+		"-c", "init.defaultbranch=master"}, args...)
+	out, err := exec.Command("git", allArgs...).CombinedOutput()
+	require.NoError(t, err, "git %v: %s", args, string(out))
+	return strings.TrimSpace(string(out))
+}
+
 // createLocalFixtureRepo builds a small local repository allowing partial clone,
 // so filter tests do not depend on the network.
 func createLocalFixtureRepo(t *testing.T) string {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "fixture")
 	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
 	t.Cleanup(func() { os.RemoveAll(path) })
-	execGit := func(args ...string) {
-		allArgs := append([]string{"-C", path, "-c", "user.name=test", "-c", "user.email=test@test.local", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)
-		out, err := exec.Command("git", allArgs...).CombinedOutput()
-		require.NoError(t, err, "git %v: %s", args, string(out))
-	}
-	execGit("init", "-q")
+	execGitIn(t, path, "init", "-q")
 	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "README.md"), []byte("# fixture"), os.FileMode(0644)))
-	execGit("add", ".")
-	execGit("commit", "-q", "-m", "initial commit")
+	execGitIn(t, path, "add", ".")
+	execGitIn(t, path, "commit", "-q", "-m", "initial commit")
 	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "main.go"), []byte("package main"), os.FileMode(0644)))
-	execGit("add", ".")
-	execGit("commit", "-q", "-m", "second commit")
-	execGit("config", "uploadpack.allowFilter", "true")
+	execGitIn(t, path, "add", ".")
+	execGitIn(t, path, "commit", "-q", "-m", "second commit")
+	execGitIn(t, path, "config", "uploadpack.allowFilter", "true")
 	return path
 }
 

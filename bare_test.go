@@ -35,6 +35,37 @@ func TestCloneBareWithFilter(t *testing.T) {
 	assert.Contains(t, string(out), "?", "expected missing (filtered) blobs in bare partial clone")
 }
 
+func TestFetchBranchWithoutCheckoutOnBareRepo(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	_, err := CloneBare(context.TODO(), path, "file://"+fixture, WithFilter("blob:none"))
+	require.NoError(t, err)
+	b, err := NewBare(context.TODO(), path)
+	require.NoError(t, err)
+
+	// The branch is created after the clone: without an explicit refspec a
+	// bare repository would never see it
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "feat.go"), []byte("package feat"), os.FileMode(0644)))
+	execGitIn(t, fixture, "add", ".")
+	execGitIn(t, fixture, "commit", "-q", "-m", "feat commit")
+	want := execGitIn(t, fixture, "rev-parse", "feat")
+
+	require.NoError(t, b.repo.FetchBranchWithoutCheckout(context.TODO(), "origin", "feat"))
+	assert.Equal(t, want, execGitIn(t, path, "rev-parse", "refs/heads/feat"))
+
+	// Non-fast-forward update (force-push): the "+" refspec must allow it
+	execGitIn(t, fixture, "commit", "-q", "--amend", "-m", "feat commit amended")
+	wantAmended := execGitIn(t, fixture, "rev-parse", "feat")
+	require.NotEqual(t, want, wantAmended)
+
+	require.NoError(t, b.repo.FetchBranchWithoutCheckout(context.TODO(), "origin", "feat"))
+	assert.Equal(t, wantAmended, execGitIn(t, path, "rev-parse", "refs/heads/feat"))
+}
+
 func TestBare(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	t.Logf("Testing in %s", path)
