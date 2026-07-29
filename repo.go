@@ -398,7 +398,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%GK||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%GK||", "--name-status", "--no-renames")
 	if err != nil {
 		return c, err
 	}
@@ -437,8 +437,10 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 	return c, err
 }
 
+// DiffSinceCommitMergeBase returns the files changed between merge-base(hash, HEAD)
+// and the worktree. Renames are reported as delete+add (--no-renames).
 func (r Repo) DiffSinceCommitMergeBase(ctx context.Context, hash string) (map[string]File, error) {
-	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--merge-base")
+	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--no-renames", "--merge-base")
 	if err != nil {
 		return nil, err
 	}
@@ -460,8 +462,10 @@ func (r Repo) DiffSinceCommitMergeBase(ctx context.Context, hash string) (map[st
 	return result, nil
 }
 
+// DiffSinceCommit returns the files changed between hash and the worktree.
+// Renames are reported as delete+add (--no-renames).
 func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File, error) {
-	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status")
+	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--no-renames")
 	if err != nil {
 		return nil, err
 	}

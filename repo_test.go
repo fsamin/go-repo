@@ -804,6 +804,40 @@ func TestDiffBetweenBranchesWithRename(t *testing.T) {
 	assert.Equal(t, "A", files["renamed.go"].Status)
 }
 
+func TestRenameReportedAsDeleteAdd(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "file://"+fixture)
+	require.NoError(t, err)
+
+	baseHash := execGitIn(t, path, "rev-parse", "HEAD")
+	execGitIn(t, path, "mv", "main.go", "renamed.go")
+	execGitIn(t, path, "commit", "-q", "-m", "rename main.go")
+	renameHash := execGitIn(t, path, "rev-parse", "HEAD")
+
+	// GetCommit files: the commit changeset must expose both paths
+	c, err := r.GetCommit(context.TODO(), renameHash, CommitOption{DisableDiffDetail: true})
+	require.NoError(t, err)
+	require.Len(t, c.Files, 2)
+	assert.Equal(t, "D", c.Files["main.go"].Status)
+	assert.Equal(t, "A", c.Files["renamed.go"].Status)
+
+	// Diff between a commit and the worktree, plain and merge-base forms
+	files, err := r.DiffSinceCommit(context.TODO(), baseHash)
+	require.NoError(t, err)
+	require.Len(t, files, 2)
+	assert.Equal(t, "D", files["main.go"].Status)
+	assert.Equal(t, "A", files["renamed.go"].Status)
+
+	files, err = r.DiffSinceCommitMergeBase(context.TODO(), baseHash)
+	require.NoError(t, err)
+	require.Len(t, files, 2)
+	assert.Equal(t, "D", files["main.go"].Status)
+	assert.Equal(t, "A", files["renamed.go"].Status)
+}
+
 func TestGetCommitWithChangetset(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
