@@ -49,6 +49,9 @@ func Clone(ctx context.Context, path, cloneURL string, opts ...Option) (Repo, er
 	if r.depth > 0 {
 		args = append(args, "--depth", strconv.Itoa(r.depth))
 	}
+	if r.filter != "" {
+		args = append(args, "--filter", r.filter)
+	}
 	args = append(args, r.url, ".")
 	_, err := r.runCmd(ctx, "git", args...)
 	if err != nil {
@@ -888,6 +891,15 @@ func WithUser(email, name string) Option {
 func WithDepth(d int) Option {
 	return func(ctx context.Context, r *Repo) error {
 		r.depth = d
+		return nil
+	}
+}
+
+// WithFilter enables git partial clone with the given object filter (e.g. "blob:none").
+// If the server does not support filtering, git falls back to a full clone.
+func WithFilter(f string) Option {
+	return func(ctx context.Context, r *Repo) error {
+		r.filter = f
 		return nil
 	}
 }

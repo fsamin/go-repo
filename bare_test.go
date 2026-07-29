@@ -4,12 +4,36 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestCloneBareWithFilter(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	_, err := CloneBare(context.TODO(), path, "file://"+fixture, WithFilter("blob:none"))
+	require.NoError(t, err)
+
+	_, err = NewBare(context.TODO(), path)
+	require.NoError(t, err)
+
+	out, err := exec.Command("git", "-C", path, "config", "--get", "remote.origin.partialclonefilter").Output()
+	require.NoError(t, err)
+	assert.Equal(t, "blob:none", strings.TrimSpace(string(out)))
+
+	// No worktree and no checkout: every blob must have been filtered out
+	out, err = exec.Command("git", "-C", path, "rev-list", "--objects", "--missing=print", "HEAD").Output()
+	require.NoError(t, err)
+	assert.Contains(t, string(out), "?", "expected missing (filtered) blobs in bare partial clone")
+}
 
 func TestBare(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())

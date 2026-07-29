@@ -33,6 +33,42 @@ func TestClone(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// createLocalFixtureRepo builds a small local repository allowing partial clone,
+// so filter tests do not depend on the network.
+func createLocalFixtureRepo(t *testing.T) string {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "fixture")
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	t.Cleanup(func() { os.RemoveAll(path) })
+	execGit := func(args ...string) {
+		allArgs := append([]string{"-C", path, "-c", "user.name=test", "-c", "user.email=test@test.local", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)
+		out, err := exec.Command("git", allArgs...).CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, string(out))
+	}
+	execGit("init", "-q")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "README.md"), []byte("# fixture"), os.FileMode(0644)))
+	execGit("add", ".")
+	execGit("commit", "-q", "-m", "initial commit")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "main.go"), []byte("package main"), os.FileMode(0644)))
+	execGit("add", ".")
+	execGit("commit", "-q", "-m", "second commit")
+	execGit("config", "uploadpack.allowFilter", "true")
+	return path
+}
+
+func TestCloneWithFilter(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	_, err := Clone(context.TODO(), path, "file://"+fixture, WithFilter("blob:none"))
+	require.NoError(t, err)
+
+	out, err := exec.Command("git", "-C", path, "config", "--get", "remote.origin.partialclonefilter").Output()
+	require.NoError(t, err)
+	assert.Equal(t, "blob:none", strings.TrimSpace(string(out)))
+}
+
 func TestCloneWithError(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)

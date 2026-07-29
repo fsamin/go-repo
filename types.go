@@ -14,6 +14,7 @@ type Repo struct {
 	verbose bool
 	logger  func(format string, i ...interface{})
 	depth   int
+	filter  string
 }
 
 // Commit represent a git commit

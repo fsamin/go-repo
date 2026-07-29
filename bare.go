@@ -24,7 +24,12 @@ func CloneBare(ctx context.Context, path, url string, opts ...Option) (Repo, err
 	if r.verbose {
 		r.log("Cloning %s\n", r.url)
 	}
-	_, err := r.runCmd(ctx, "git", "clone", "--bare", r.url, ".")
+	args := []string{"clone", "--bare"}
+	if r.filter != "" {
+		args = append(args, "--filter", r.filter)
+	}
+	args = append(args, r.url, ".")
+	_, err := r.runCmd(ctx, "git", args...)
 	if err != nil {
 		return r, err
 	}
