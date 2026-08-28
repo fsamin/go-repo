@@ -211,3 +211,29 @@ func TestNewBareChecksExactPath(t *testing.T) {
 	_, err = NewBare(context.TODO(), filepath.Join(root, "empty"))
 	require.Error(t, err, "a missing path is not a bare repository")
 }
+
+func TestRevParse(t *testing.T) {
+	root := t.TempDir()
+	run := func(args ...string) string {
+		cmd := exec.Command("git", append([]string{"-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	run("init", "-q")
+	run("commit", "-q", "--allow-empty", "-m", "init")
+	run("tag", "-a", "v1", "-m", "annotated")
+	run("tag", "light")
+	sha := run("rev-parse", "HEAD")
+
+	r, err := New(context.TODO(), root)
+	require.NoError(t, err)
+
+	for _, rev := range []string{"refs/tags/v1", "refs/tags/light", "HEAD", sha} {
+		got, err := r.RevParse(context.TODO(), rev)
+		require.NoError(t, err, rev)
+		require.Equal(t, sha, got, "%s must peel to the commit", rev)
+	}
+	_, err = r.RevParse(context.TODO(), "refs/tags/missing")
+	require.Error(t, err)
+}

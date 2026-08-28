@@ -571,6 +571,16 @@ func (r Repo) CurrentBranch(ctx context.Context) (string, error) {
 	return b[:len(b)-1], nil
 }
 
+// RevParse resolves rev (a ref, a sha or any git revision such as
+// "refs/tags/v1^{commit}") to a full commit hash; it fails when rev is unknown.
+func (r Repo) RevParse(ctx context.Context, rev string) (string, error) {
+	out, err := r.runCmd(ctx, "git", "rev-parse", "--verify", "--quiet", rev+"^{commit}")
+	if err != nil {
+		return "", fmt.Errorf("unknown revision %s: %s", rev, err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
 func (r Repo) VerifyCommit(ctx context.Context, commit string) error {
 	_, err := r.runCmd(ctx, "git", "verify-commit", commit)
 	if err != nil {
