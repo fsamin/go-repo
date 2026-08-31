@@ -192,7 +192,7 @@ func TestBare(t *testing.T) {
 
 }
 
-func TestNewBareChecksExactPath(t *testing.T) {
+func TestNewBareLookup(t *testing.T) {
 	root := t.TempDir()
 	bare := filepath.Join(root, "repo.git")
 	require.NoError(t, os.MkdirAll(bare, os.FileMode(0755)))
@@ -201,15 +201,14 @@ func TestNewBareChecksExactPath(t *testing.T) {
 	_, err := NewBare(context.TODO(), bare)
 	require.NoError(t, err, "a bare repository opens from its own path")
 
-	// An empty directory inside a bare repository is not a repository itself:
-	// the parent must not be picked up in its place.
+	// Like New, the lookup walks up to the enclosing repository
 	inside := filepath.Join(bare, "cache", "entry")
 	require.NoError(t, os.MkdirAll(inside, os.FileMode(0755)))
 	_, err = NewBare(context.TODO(), inside)
-	require.Error(t, err)
+	require.NoError(t, err)
 
 	_, err = NewBare(context.TODO(), filepath.Join(root, "empty"))
-	require.Error(t, err, "a missing path is not a bare repository")
+	require.Error(t, err, "no bare repository anywhere up the path")
 }
 
 func TestRevParse(t *testing.T) {

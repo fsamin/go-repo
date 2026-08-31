@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -36,15 +37,11 @@ func CloneBare(ctx context.Context, path, url string, opts ...Option) (Repo, err
 }
 
 // NewBare instanciance a bare repo instance from the path assuming the repo has already been cloned in.
-// NewBare opens the bare repository at path; unlike New, it does not look
-// into parent directories, a bare repository has no worktree to be inside of.
 func NewBare(ctx context.Context, path string, opts ...Option) (b BareRepo, err error) {
 	b = BareRepo{Repo{path: path}}
-	if b.repo.path, err = filepath.Abs(path); err != nil {
+	b.repo.path, err = findRefsDirectory(path)
+	if err != nil {
 		return b, err
-	}
-	if !checkRefsDirectory(b.repo.path) {
-		return b, errors.New("path is not a bare repository")
 	}
 
 	output, _ := b.repo.runCmd(ctx, "git", "rev-parse", "--is-bare-repository")
@@ -59,6 +56,25 @@ func NewBare(ctx context.Context, path string, opts ...Option) (b BareRepo, err 
 	}
 
 	return b, nil
+}
+
+func findRefsDirectory(p string) (string, error) {
+	p = path.Join(p)
+	p, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+
+	if p == string(filepath.Separator) {
+		return "", errors.New("refs directory not found")
+	}
+
+	if checkRefsDirectory(p) {
+		return p, nil
+	}
+
+	parent := filepath.Dir(p)
+	return findRefsDirectory(parent)
 }
 
 func checkRefsDirectory(path string) bool {
