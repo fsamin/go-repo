@@ -24,7 +24,12 @@ func CloneBare(ctx context.Context, path, url string, opts ...Option) (Repo, err
 	if r.verbose {
 		r.log("Cloning %s\n", r.url)
 	}
-	_, err := r.runCmd(ctx, "git", "clone", "--bare", r.url, ".")
+	args := []string{"clone", "--bare"}
+	if r.filter != "" {
+		args = append(args, "--filter", r.filter)
+	}
+	args = append(args, r.url, ".")
+	_, err := r.runCmd(ctx, "git", args...)
 	if err != nil {
 		return r, err
 	}
@@ -73,11 +78,14 @@ func findRefsDirectory(p string) (string, error) {
 }
 
 func checkRefsDirectory(path string) bool {
-	dotGit := filepath.Join(path, "refs")
-	if _, err := os.Stat(dotGit); err != nil || os.IsNotExist(err) {
-		return false
-	}
-	return true
+	_, err := os.Stat(filepath.Join(path, "refs"))
+	return err == nil
+}
+
+// Repo returns the underlying Repo to access methods not exposed on BareRepo;
+// callers must stick to commands that do not require a worktree.
+func (b BareRepo) Repo() Repo {
+	return b.repo
 }
 
 func (b BareRepo) ListFiles(ctx context.Context) ([]string, error) {

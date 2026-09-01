@@ -33,6 +33,49 @@ func TestClone(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// execGitIn runs a git command in dir with a neutral identity and signing
+// disabled, so tests do not depend on the developer's global git config.
+func execGitIn(t *testing.T, dir string, args ...string) string {
+	allArgs := append([]string{"-C", dir,
+		"-c", "user.name=test", "-c", "user.email=test@test.local",
+		"-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false",
+		"-c", "init.defaultbranch=master"}, args...)
+	out, err := exec.Command("git", allArgs...).CombinedOutput()
+	require.NoError(t, err, "git %v: %s", args, string(out))
+	return strings.TrimSpace(string(out))
+}
+
+// createLocalFixtureRepo builds a small local repository allowing partial clone,
+// so filter tests do not depend on the network.
+func createLocalFixtureRepo(t *testing.T) string {
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "fixture")
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	t.Cleanup(func() { os.RemoveAll(path) })
+	execGitIn(t, path, "init", "-q")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "README.md"), []byte("# fixture"), os.FileMode(0644)))
+	execGitIn(t, path, "add", ".")
+	execGitIn(t, path, "commit", "-q", "-m", "initial commit")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "main.go"), []byte("package main"), os.FileMode(0644)))
+	execGitIn(t, path, "add", ".")
+	execGitIn(t, path, "commit", "-q", "-m", "second commit")
+	execGitIn(t, path, "config", "uploadpack.allowFilter", "true")
+	return path
+}
+
+func TestCloneWithFilter(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+
+	_, err := Clone(context.TODO(), path, "file://"+fixture, WithFilter("blob:none"))
+	require.NoError(t, err)
+
+	out, err := exec.Command("git", "-C", path, "config", "--get", "remote.origin.partialclonefilter").Output()
+	require.NoError(t, err)
+	assert.Equal(t, "blob:none", strings.TrimSpace(string(out)))
+}
+
 func TestCloneWithError(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "testdata", t.Name())
 	defer os.RemoveAll(path)
@@ -680,6 +723,119 @@ func TestDescribe(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("git describe: %+v", d)
+}
+
+func TestDescribeDirtyAndRef(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	execGitIn(t, fixture, "tag", "v1.0.0")
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	require.NoError(t, ioutil.WriteFile(filepath.Join(fixture, "feat.go"), []byte("package feat"), os.FileMode(0644)))
+	execGitIn(t, fixture, "add", ".")
+	execGitIn(t, fixture, "commit", "-q", "-m", "feat commit")
+	execGitIn(t, fixture, "checkout", "-q", "master")
+
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "file://"+fixture)
+	require.NoError(t, err)
+
+	masterHash := "g" + execGitIn(t, path, "rev-parse", "--short", "HEAD")
+	opt := DescribeOpt{DirtySemver: true, Long: true, Match: []string{"v[0-9]*"}, DirtyMark: "-dirty"}
+
+	// Clean worktree
+	d, err := r.Describe(context.TODO(), &opt)
+	require.NoError(t, err)
+	assert.False(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-0-"+masterHash, d.Raw)
+	assert.Equal(t, masterHash, d.Suffix)
+	assert.Equal(t, "1.0.0", d.SemverString)
+
+	// Modified tracked file: dirty is detected and reported in every field
+	require.NoError(t, ioutil.WriteFile(filepath.Join(path, "README.md"), []byte("modified"), os.FileMode(0644)))
+	d, err = r.Describe(context.TODO(), &opt)
+	require.NoError(t, err)
+	assert.True(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-0-"+masterHash+"-dirty", d.Raw)
+	assert.Equal(t, "v1.0.0", d.Tag)
+	assert.Equal(t, masterHash+"-dirty", d.Suffix)
+	assert.Equal(t, "1.0.0+0."+masterHash+".dirty", d.SemverString)
+
+	// Same dirty worktree but empty DirtyMark: no --dirty flag, never dirty
+	d, err = r.Describe(context.TODO(), &DescribeOpt{DirtySemver: true, Long: true, Match: []string{"v[0-9]*"}})
+	require.NoError(t, err)
+	assert.False(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-0-"+masterHash, d.Raw)
+	assert.Equal(t, "1.0.0", d.SemverString)
+
+	// Ref: describes the target branch, not the checkout; the dirty check is
+	// skipped even with a DirtyMark set (git rejects --dirty on a commit-ish),
+	// and the still-dirty worktree must not leak into the result
+	featHash := "g" + execGitIn(t, path, "rev-parse", "--short", "origin/feat")
+	optRef := opt
+	optRef.Ref = "origin/feat"
+	d, err = r.Describe(context.TODO(), &optRef)
+	require.NoError(t, err)
+	assert.False(t, d.Dirty)
+	assert.Equal(t, "v1.0.0-1-"+featHash, d.Raw)
+	assert.Equal(t, 1, d.Distance)
+	assert.Equal(t, "1.0.0+1."+featHash, d.SemverString)
+}
+
+func TestDiffBetweenBranchesWithRename(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	execGitIn(t, fixture, "checkout", "-q", "-b", "feat")
+	execGitIn(t, fixture, "mv", "main.go", "renamed.go")
+	execGitIn(t, fixture, "commit", "-q", "-m", "rename main.go")
+	execGitIn(t, fixture, "checkout", "-q", "master")
+
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "file://"+fixture)
+	require.NoError(t, err)
+
+	// A rename must yield delete+add: with rename detection it would be a
+	// single R line and the new path would be lost by the parsing
+	files, err := r.DiffBetweenBranches(context.TODO(), "origin/feat", "master")
+	require.NoError(t, err)
+	require.Len(t, files, 2)
+	assert.Equal(t, "D", files["main.go"].Status)
+	assert.Equal(t, "A", files["renamed.go"].Status)
+}
+
+func TestRenameReportedAsDeleteAdd(t *testing.T) {
+	fixture := createLocalFixtureRepo(t)
+	path := filepath.Join(os.TempDir(), "testdata", t.Name(), "clone")
+	defer os.RemoveAll(path)
+	require.NoError(t, os.MkdirAll(path, os.FileMode(0755)))
+	r, err := Clone(context.TODO(), path, "file://"+fixture)
+	require.NoError(t, err)
+
+	baseHash := execGitIn(t, path, "rev-parse", "HEAD")
+	execGitIn(t, path, "mv", "main.go", "renamed.go")
+	execGitIn(t, path, "commit", "-q", "-m", "rename main.go")
+	renameHash := execGitIn(t, path, "rev-parse", "HEAD")
+
+	// GetCommit files: the commit changeset must expose both paths
+	c, err := r.GetCommit(context.TODO(), renameHash, CommitOption{DisableDiffDetail: true})
+	require.NoError(t, err)
+	require.Len(t, c.Files, 2)
+	assert.Equal(t, "D", c.Files["main.go"].Status)
+	assert.Equal(t, "A", c.Files["renamed.go"].Status)
+
+	// Diff between a commit and the worktree, plain and merge-base forms
+	files, err := r.DiffSinceCommit(context.TODO(), baseHash)
+	require.NoError(t, err)
+	require.Len(t, files, 2)
+	assert.Equal(t, "D", files["main.go"].Status)
+	assert.Equal(t, "A", files["renamed.go"].Status)
+
+	files, err = r.DiffSinceCommitMergeBase(context.TODO(), baseHash)
+	require.NoError(t, err)
+	require.Len(t, files, 2)
+	assert.Equal(t, "D", files["main.go"].Status)
+	assert.Equal(t, "A", files["renamed.go"].Status)
 }
 
 func TestGetCommitWithChangetset(t *testing.T) {

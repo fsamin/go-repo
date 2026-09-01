@@ -49,6 +49,9 @@ func Clone(ctx context.Context, path, cloneURL string, opts ...Option) (Repo, er
 	if r.depth > 0 {
 		args = append(args, "--depth", strconv.Itoa(r.depth))
 	}
+	if r.filter != "" {
+		args = append(args, "--filter", r.filter)
+	}
 	args = append(args, r.url, ".")
 	_, err := r.runCmd(ctx, "git", args...)
 	if err != nil {
@@ -395,7 +398,7 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 		return r == '\n' || r == ' ' || r == '\t'
 	})
 	c := Commit{}
-	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%GK||", "--name-status")
+	details, err := r.runCmd(ctx, "git", "show", hash, "--pretty=%at||%an||%ae||%GK||", "--name-status", "--no-renames")
 	if err != nil {
 		return c, err
 	}
@@ -434,8 +437,10 @@ func (r Repo) GetCommit(ctx context.Context, hash string, opts CommitOption) (Co
 	return c, err
 }
 
+// DiffSinceCommitMergeBase returns the files changed between merge-base(hash, HEAD)
+// and the worktree. Renames are reported as delete+add (--no-renames).
 func (r Repo) DiffSinceCommitMergeBase(ctx context.Context, hash string) (map[string]File, error) {
-	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--merge-base")
+	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--no-renames", "--merge-base")
 	if err != nil {
 		return nil, err
 	}
@@ -457,8 +462,10 @@ func (r Repo) DiffSinceCommitMergeBase(ctx context.Context, hash string) (map[st
 	return result, nil
 }
 
+// DiffSinceCommit returns the files changed between hash and the worktree.
+// Renames are reported as delete+add (--no-renames).
 func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File, error) {
-	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status")
+	details, err := r.runCmd(ctx, "git", "diff", hash, "--name-status", "--no-renames")
 	if err != nil {
 		return nil, err
 	}
@@ -480,9 +487,35 @@ func (r Repo) DiffSinceCommit(ctx context.Context, hash string) (map[string]File
 	return result, nil
 }
 
+// DiffMergeBase returns the files changed between merge-base(from, to) and to.
+// Renames are reported as delete+add (--no-renames); only commit trees are
+// read, so it works on bare and partial clones.
+func (r Repo) DiffMergeBase(ctx context.Context, from, to string) (map[string]File, error) {
+	details, err := r.runCmd(ctx, "git", "diff", "--name-status", "--no-renames", "--merge-base", from, to)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]File)
+	for _, fLine := range strings.Split(details, "\n") {
+		if len(strings.Trim(fLine, " ")) == 0 {
+			continue
+		}
+		fileData := strings.Split(fLine, "\t")
+		if len(fileData) < 2 {
+			continue
+		}
+		f := File{Status: fileData[0], Filename: fileData[1]}
+		result[f.Filename] = f
+	}
+	return result, nil
+}
+
+// DiffBetweenBranches returns the files changed on branchFrom since its
+// merge-base with branchTo. Renames are reported as delete+add (--no-renames),
+// so both the old and the new path appear in the result.
 func (r Repo) DiffBetweenBranches(ctx context.Context, branchFrom, branchTo string) (map[string]File, error) {
 	branchArg := branchTo + "..." + branchFrom
-	details, err := r.runCmd(ctx, "git", "diff", branchArg, "--name-status")
+	details, err := r.runCmd(ctx, "git", "diff", branchArg, "--name-status", "--no-renames")
 	if err != nil {
 		return nil, err
 	}
@@ -536,6 +569,16 @@ func (r Repo) CurrentBranch(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return b[:len(b)-1], nil
+}
+
+// RevParse resolves rev (a ref, a sha or any git revision such as
+// "refs/tags/v1^{commit}") to a full commit hash; it fails when rev is unknown.
+func (r Repo) RevParse(ctx context.Context, rev string) (string, error) {
+	out, err := r.runCmd(ctx, "git", "rev-parse", "--verify", "--quiet", rev+"^{commit}")
+	if err != nil {
+		return "", fmt.Errorf("unknown revision %s: %s", rev, err)
+	}
+	return strings.TrimSpace(out), nil
 }
 
 func (r Repo) VerifyCommit(ctx context.Context, commit string) error {
@@ -594,6 +637,18 @@ func (r Repo) LocalBranchExists(ctx context.Context, branch string) (exists, has
 		hasUpstream = true
 	}
 	return
+}
+
+// FetchBranchWithoutCheckout fetches the given branch with an explicit refspec,
+// updating refs/heads/<branch> without touching the worktree, unlike
+// FetchRemoteBranch; the "+" allows non-fast-forward updates (force-push).
+// Works on bare repositories, which have no default fetch refspec.
+func (r Repo) FetchBranchWithoutCheckout(ctx context.Context, remote, branch string) error {
+	refspec := fmt.Sprintf("+refs/heads/%s:refs/heads/%s", branch, branch)
+	if _, err := r.runCmd(ctx, "git", "fetch", remote, refspec); err != nil {
+		return fmt.Errorf("unable to git fetch branch %s: %s", branch, err)
+	}
+	return nil
 }
 
 // FetchRemoteBranch runs a git fetch then checkout the remote branch
@@ -892,6 +947,15 @@ func WithDepth(d int) Option {
 	}
 }
 
+// WithFilter enables git partial clone with the given object filter (e.g. "blob:none").
+// If the server does not support filtering, git falls back to a full clone.
+func WithFilter(f string) Option {
+	return func(ctx context.Context, r *Repo) error {
+		r.filter = f
+		return nil
+	}
+}
+
 func WithSignKey(keyId string) Option {
 	return func(ctx context.Context, r *Repo) error {
 		out, err := r.runCmd(ctx, "git", "config", "user.signingkey", keyId)
@@ -1028,7 +1092,10 @@ type DescribeOpt struct {
 	Long             bool
 	RequireAnnotated bool
 	Match            []string
-	DirtyMark        string
+	// DirtyMark suffixes a dirty worktree description; empty disables the dirty check
+	DirtyMark string
+	// Ref is the commit-ish to describe; HEAD when empty (implies no dirty check)
+	Ref string
 }
 
 type Description struct {
@@ -1051,12 +1118,19 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 			DirtyMark:   "-dirty",
 		}
 	}
-	args := []string{"describe", "--long", "--dirty=" + opt.DirtyMark, "--always"}
+	args := []string{"describe", "--long", "--always"}
+	dirtyEnabled := opt.DirtyMark != "" && opt.Ref == ""
+	if dirtyEnabled {
+		args = append(args, "--dirty="+opt.DirtyMark)
+	}
 	if !opt.RequireAnnotated {
 		args = append(args, "--tags")
 	}
 	for _, m := range opt.Match {
 		args = append(args, "--match", m)
+	}
+	if opt.Ref != "" {
+		args = append(args, opt.Ref)
 	}
 
 	// git fetch --prune --unshallow
@@ -1080,7 +1154,7 @@ func (r Repo) Describe(ctx context.Context, opt *DescribeOpt) (*Description, err
 		Raw: description,
 	}
 
-	if strings.HasSuffix(description, opt.DirtyMark) {
+	if dirtyEnabled && strings.HasSuffix(description, opt.DirtyMark) {
 		output.Dirty = true
 		description = strings.TrimSuffix(description, opt.DirtyMark)
 	}
