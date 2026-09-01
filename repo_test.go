@@ -694,9 +694,19 @@ func TestTags(t *testing.T) {
 	r, err := Clone(context.TODO(), path, "https://github.com/fsamin/go-repo.git")
 	require.NoError(t, err)
 	tags, err := r.Tags(context.TODO())
+	require.NoError(t, err)
 	require.NotEmpty(t, tags)
 	t.Log(tags)
-	require.NoError(t, err)
+
+	// v0.2.2 is an annotated tag: it must resolve to the peeled commit, not the tag object
+	var found bool
+	for _, tag := range tags {
+		if tag.Message == "refs/tags/v0.2.2" {
+			found = true
+			assert.Equal(t, "d7b67d9fe0fc7f6a28db73140e6f3d7ec0d048d8", tag.Commit.LongHash)
+		}
+	}
+	assert.True(t, found, "tag refs/tags/v0.2.2 not found")
 }
 
 func TestSubmodule(t *testing.T) {

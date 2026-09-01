@@ -1029,35 +1029,31 @@ func (r Repo) log(format string, i ...interface{}) {
 }
 
 func (r Repo) Tags(ctx context.Context) ([]Tag, error) {
-	s, err := r.runCmd(ctx, "git", "show-ref", "--tags")
-	if err != nil {
-		return nil, err
-	}
-
-	var commitsString []string
-	var tagString []string
-	scanner := bufio.NewScanner(strings.NewReader(s))
-	for scanner.Scan() {
-		s := scanner.Text()
-		h := strings.Split(s, " ")[0]
-		h = strings.TrimSpace(h)
-		t := strings.Split(s, " ")[1]
-		t = strings.TrimSpace(t)
-		commitsString = append(commitsString, h)
-		tagString = append(tagString, t)
-	}
-	err = scanner.Err()
+	// %(*objectname) is the peeled commit for annotated tags, empty for lightweight ones
+	s, err := r.runCmd(ctx, "git", "for-each-ref", "refs/tags", "--format=%(objectname)|%(*objectname)|%(refname)")
 	if err != nil {
 		return nil, err
 	}
 
 	var tags []Tag
-	for i, c := range commitsString {
-		t, err := r.GetCommit(ctx, c, CommitOption{DisableDiffDetail: true})
+	scanner := bufio.NewScanner(strings.NewReader(s))
+	for scanner.Scan() {
+		parts := strings.SplitN(scanner.Text(), "|", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		commitSHA := parts[1] // annotated tag: the peeled commit
+		if commitSHA == "" {
+			commitSHA = parts[0] // lightweight tag: the ref points directly at the commit
+		}
+		c, err := r.GetCommit(ctx, commitSHA, CommitOption{DisableDiffDetail: true})
 		if err != nil {
 			return nil, err
 		}
-		tags = append(tags, Tag{Commit: t, Message: tagString[i]})
+		tags = append(tags, Tag{Commit: c, Message: parts[2]})
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 
 	return tags, nil
